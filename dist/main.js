@@ -30,10 +30,10 @@ function makePathDot(){return new THREE.Mesh(new THREE.CylinderGeometry(.2,.25,.
 // A curved breadcrumb path and a warm village near the starting location.
 for(let i=0;i<24;i++){ const lat=-8+Math.sin(i*.42)*5, lon=-36+i*3.2; place(makePathDot(),lat,lon,.045); }
 // The first ten degrees around the explorer are a deliberately obstacle-free snow plaza.
-[[9,-12,1.0],[12,10,.83],[-8,15,.85],[17,-18,.72],[-16,-18,.9],[3,29,.75],[-20,28,.85],[-3,-37,.76]].forEach(([a,b,s])=>placeBlocked(makeTree(s),a,b,.04,.36+s*.25));
-[['#df6d61',11,9],['#e8a85e',8,17],['#7b9bd0',-5,13],['#bf789a',14,-10],['#77aab2',-13,23],['#d68c58',19,22],['#9c6bb0',-19,-25]].forEach(([c,a,b])=>placeBlocked(makeHouse(c),a,b,.05,.72));
+[[9,-12,1.0],[12,10,.83],[-8,15,.85],[17,-18,.72],[-16,-18,.9],[3,29,.75],[-20,28,.85],[-3,-37,.76]].forEach(([a,b,s])=>placeBlocked(makeTree(s),a,b,.04,.27+s*.18));
+[['#df6d61',11,9],['#e8a85e',8,17],['#7b9bd0',-5,13],['#bf789a',14,-10],['#77aab2',-13,23],['#d68c58',19,22],['#9c6bb0',-19,-25]].forEach(([c,a,b])=>placeBlocked(makeHouse(c),a,b,.05,.55));
 // Denser forest pockets sit outside the broad, winding central path so they become landmarks, not dead ends.
-for(let i=0;i<40;i++){ const a=(i*37)%84-42, b=(i*71)%150-75; if(Math.abs(a)<25&&Math.abs(b)<42) continue; const s=.42+(i%4)*.13; placeBlocked(makeTree(s),a,b,.03,.30+s*.23); }
+for(let i=0;i<40;i++){ const a=(i*37)%84-42, b=(i*71)%150-75; if(Math.abs(a)<25&&Math.abs(b)<42) continue; const s=.42+(i%4)*.13; placeBlocked(makeTree(s),a,b,.03,.23+s*.18); }
 
 // Bell landmark.
 const bell = new THREE.Group();
@@ -53,6 +53,8 @@ const head=new THREE.Mesh(new THREE.SphereGeometry(.18,12,8),new THREE.MeshStand
 const hat=new THREE.Mesh(new THREE.ConeGeometry(.22,.38,8),new THREE.MeshStandardMaterial({color:'#d83c47',flatShading:true}));hat.position.y=.99;avatar.add(hat);
 const brim=new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.05,12),new THREE.MeshStandardMaterial({color:'#f4f8ff'}));brim.position.y=.82;avatar.add(brim);
 const leg1=new THREE.Mesh(new THREE.BoxGeometry(.11,.36,.12),new THREE.MeshStandardMaterial({color:'#3b557c'})),leg2=leg1.clone();leg1.position.set(-.1,.1,0);leg2.position.set(.1,.1,0);avatar.add(leg1,leg2);
+// A bright scarf knot marks the explorer's facing direction, making turn-in-place legible.
+const scarf=new THREE.Mesh(new THREE.SphereGeometry(.075,8,6),new THREE.MeshStandardMaterial({color:'#ffd260',flatShading:true}));scarf.position.set(0,.62,.19);avatar.add(scarf);
 
 // Snow particles, gently falling around the camera.
 const flakes=420, pos=new Float32Array(flakes*3); for(let i=0;i<flakes;i++){pos[i*3]=(Math.random()-.5)*20;pos[i*3+1]=(Math.random()-.5)*15;pos[i*3+2]=(Math.random()-.5)*18;}
@@ -70,8 +72,22 @@ mute.addEventListener('click',()=>{muted=!muted;mute.setAttribute('aria-pressed'
 snowfall.addEventListener('input',()=>{snowIntensity=Number(snowfall.value)/100;snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity));snowMaterial.opacity=.15+.65*snowIntensity;});
 function ringBell(){const bellWorld=bell.getWorldPosition(new THREE.Vector3()); if(bellWorld.distanceTo(hero.position)<2.05){bell.rotation.z=.38; bellCooldown=1.1; jingle(); toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1900);} }
 function jingle(){ if(muted)return; const ctx=new (window.AudioContext||window.webkitAudioContext)(); const t=ctx.currentTime; [880,1175,1568].forEach((f,i)=>{let o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(.0001,t+i*.12);g.gain.exponentialRampToValueAtTime(.16,t+i*.12+.015);g.gain.exponentialRampToValueAtTime(.0001,t+i*.12+.55);o.start(t+i*.12);o.stop(t+i*.12+.58);}); }
-function wouldHitBlocker(){ world.updateMatrixWorld(true); return blockers.some(({obj,radius})=>obj.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<radius+.23); }
-function tryMove(amount){ const old=world.quaternion.clone(); const direction=new THREE.Vector3(Math.sin(heading),Math.cos(heading),0); const axis=new THREE.Vector3(0,0,1).cross(direction).normalize(); world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axis,-amount)); if(wouldHitBlocker()) world.quaternion.copy(old); }
+function wouldHitBlocker(){ world.updateMatrixWorld(true); return blockers.some(({obj,radius})=>obj.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<radius+.21); }
+function tryMoveAt(directionHeading,amount){
+  const old=world.quaternion.clone();
+  const direction=new THREE.Vector3(Math.sin(directionHeading),Math.cos(directionHeading),0);
+  const axis=new THREE.Vector3(0,0,1).cross(direction).normalize();
+  world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axis,-amount));
+  if(!wouldHitBlocker()) return true;
+  world.quaternion.copy(old); return false;
+}
+function tryMove(amount){
+  // Preserve the character's chosen heading first. If an obstacle is ahead, ease along either shoulder
+  // rather than pinning the player against its collision boundary.
+  if(tryMoveAt(heading,amount)) return true;
+  const shoulder=Math.sign(amount)*.72;
+  return tryMoveAt(heading+shoulder,amount) || tryMoveAt(heading-shoulder,amount) || tryMoveAt(heading+shoulder*1.75,amount) || tryMoveAt(heading-shoulder*1.75,amount);
+}
 function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/1000||.016);elapsed=t; const forward=keys.w||keys.arrowup,back=keys.s||keys.arrowdown,left=keys.a||keys.arrowleft,right=keys.d||keys.arrowright;
   if(left)heading+=1.85*dt; if(right)heading-=1.85*dt; avatar.rotation.y=heading;
   walking=forward||back; const speed=walking?1.05:0; if(forward)tryMove(speed*dt); if(back)tryMove(-speed*.65*dt);
