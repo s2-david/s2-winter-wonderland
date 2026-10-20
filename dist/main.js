@@ -4,6 +4,9 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#101b3a');
 scene.fog = new THREE.FogExp2('#101b3a', 0.035);
 const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, .1, 100);
+// At the starting point the planet's local "up" is +Z, not Three's usual +Y.
+// Keeping the camera aligned to that normal prevents the third-person view from rolling over the horizon.
+camera.up.set(0, 0, 1);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -96,8 +99,15 @@ function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/
   avatar.rotation.y=0;
   walking=forward||back; const speed=walking?1.05:0; if(forward)tryMove(speed*dt); if(back)tryMove(-speed*.65*dt);
   if(walking){const swing=Math.sin(t*.014)*.55;leg1.rotation.x=swing;leg2.rotation.x=-swing;}else{leg1.rotation.x=leg2.rotation.x=0;}
-  // Ground-level third-person framing: the lens sits low behind the explorer and looks over their head.
-  zoom=THREE.MathUtils.lerp(zoom,targetZoom,.08);camera.position.set(0,.2,zoom);camera.lookAt(0,5.5,2);
+  // Third-person framing lives on the surface's tangent: behind the explorer (positive Y), not above them
+  // along the sphere's outward Z axis. The overview smoothly returns to the familiar whole-planet view.
+  zoom=THREE.MathUtils.lerp(zoom,targetZoom,.08);
+  const overview=THREE.MathUtils.clamp((zoom-20)/14,0,1);
+  camera.position.lerpVectors(new THREE.Vector3(0,4.5,12.2),new THREE.Vector3(0,4.7,zoom),overview);
+  // The forward focal point stays on the near, exterior snow surface: camera → explorer → path,
+  // avoiding a line that cuts through the globe.
+  const focus=new THREE.Vector3().lerpVectors(new THREE.Vector3(0,-2,9.8),new THREE.Vector3(0,0,0),overview);
+  camera.lookAt(focus);
   const a=snowGeo.attributes.position.array;for(let i=1;i<a.length;i+=3){a[i]-=dt*(.7+(i%5)*.08);if(a[i]<-7)a[i]=8;}snowGeo.attributes.position.needsUpdate=true;
   if(bellCooldown>0){bellCooldown-=dt;bell.rotation.z*=.86;} else bell.rotation.z=0;
   const near=bell.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<2.05;prompt.classList.toggle('show',near);
