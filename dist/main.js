@@ -45,7 +45,7 @@ const bellBody=new THREE.Mesh(new THREE.SphereGeometry(.25,10,7,0,Math.PI*2,0,Ma
 const clapper=new THREE.Mesh(new THREE.SphereGeometry(.06,8,6),new THREE.MeshStandardMaterial({color:'#5f3b25'}));clapper.position.y=.88;bell.add(clapper);
 place(bell, -2, -6, .05); const bellGlow=new THREE.PointLight('#ffd373',1.3,4); bellGlow.position.set(0,1.1,.2); bell.add(bellGlow);
 
-// Explorer stays planted while the planet moves underneath. The inner group independently turns in place.
+// Explorer stays planted and always faces the forward screen direction while the planet moves underneath.
 const hero=new THREE.Group(); scene.add(hero); hero.position.set(0,0,R+.12); hero.rotation.x=Math.PI/2;
 const avatar=new THREE.Group(); hero.add(avatar);
 const body=new THREE.Mesh(new THREE.CapsuleGeometry(.18,.42,4,8),new THREE.MeshStandardMaterial({color:'#e9575b',flatShading:true})); body.rotation.x=Math.PI/2; body.position.y=.35; avatar.add(body);
@@ -53,14 +53,14 @@ const head=new THREE.Mesh(new THREE.SphereGeometry(.18,12,8),new THREE.MeshStand
 const hat=new THREE.Mesh(new THREE.ConeGeometry(.22,.38,8),new THREE.MeshStandardMaterial({color:'#d83c47',flatShading:true}));hat.position.y=.99;avatar.add(hat);
 const brim=new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.05,12),new THREE.MeshStandardMaterial({color:'#f4f8ff'}));brim.position.y=.82;avatar.add(brim);
 const leg1=new THREE.Mesh(new THREE.BoxGeometry(.11,.36,.12),new THREE.MeshStandardMaterial({color:'#3b557c'})),leg2=leg1.clone();leg1.position.set(-.1,.1,0);leg2.position.set(.1,.1,0);avatar.add(leg1,leg2);
-// A bright scarf knot marks the explorer's facing direction, making turn-in-place legible.
+// A bright scarf knot marks the explorer's fixed, forward-facing heading.
 const scarf=new THREE.Mesh(new THREE.SphereGeometry(.075,8,6),new THREE.MeshStandardMaterial({color:'#ffd260',flatShading:true}));scarf.position.set(0,.62,.19);avatar.add(scarf);
 
 // Snow particles, gently falling around the camera.
 const flakes=420, pos=new Float32Array(flakes*3); for(let i=0;i<flakes;i++){pos[i*3]=(Math.random()-.5)*20;pos[i*3+1]=(Math.random()-.5)*15;pos[i*3+2]=(Math.random()-.5)*18;}
 const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const snowMaterial=new THREE.PointsMaterial({color:'#fff',size:.07,transparent:true,opacity:.8,sizeAttenuation:true});const snow=new THREE.Points(snowGeo,snowMaterial);scene.add(snow);
 
-const keys={}; let zoom=16.5, targetZoom=16.5, walking=false, elapsed=0, bellCooldown=0, heading=0;
+const keys={}; let zoom=16.5, targetZoom=16.5, walking=false, elapsed=0, bellCooldown=0;
 const prompt=document.querySelector('#prompt'),toast=document.querySelector('#toast'), view=document.querySelector('#view'), mute=document.querySelector('#mute'), snowfall=document.querySelector('#snowfall');
 let muted=false, snowIntensity=Number(snowfall.value)/100;
 snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity)); snowMaterial.opacity=.15+.65*snowIntensity;
@@ -82,14 +82,17 @@ function tryMoveAt(directionHeading,amount){
   world.quaternion.copy(old); return false;
 }
 function tryMove(amount){
-  // Preserve the character's chosen heading first. If an obstacle is ahead, ease along either shoulder
-  // rather than pinning the player against its collision boundary.
-  if(tryMoveAt(heading,amount)) return true;
+  // Forward is permanently screen-up. If a landmark is ahead, ease along either shoulder rather than
+  // pinning the player against its collision boundary.
+  if(tryMoveAt(0,amount)) return true;
   const shoulder=Math.sign(amount)*.72;
-  return tryMoveAt(heading+shoulder,amount) || tryMoveAt(heading-shoulder,amount) || tryMoveAt(heading+shoulder*1.75,amount) || tryMoveAt(heading-shoulder*1.75,amount);
+  return tryMoveAt(shoulder,amount) || tryMoveAt(-shoulder,amount) || tryMoveAt(shoulder*1.75,amount) || tryMoveAt(-shoulder*1.75,amount);
 }
 function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/1000||.016);elapsed=t; const forward=keys.w||keys.arrowup,back=keys.s||keys.arrowdown,left=keys.a||keys.arrowleft,right=keys.d||keys.arrowright;
-  if(left)heading+=1.85*dt; if(right)heading-=1.85*dt; avatar.rotation.y=heading;
+  // Steering rotates the planet itself, so the explorer never turns away from their forward course.
+  if(left)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),1.55*dt));
+  if(right)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-1.55*dt));
+  avatar.rotation.y=0;
   walking=forward||back; const speed=walking?1.05:0; if(forward)tryMove(speed*dt); if(back)tryMove(-speed*.65*dt);
   if(walking){const swing=Math.sin(t*.014)*.55;leg1.rotation.x=swing;leg2.rotation.x=-swing;}else{leg1.rotation.x=leg2.rotation.x=0;}
   zoom=THREE.MathUtils.lerp(zoom,targetZoom,.08);camera.position.set(0,2.35,zoom);camera.lookAt(0,0,0);
