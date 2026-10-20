@@ -24,7 +24,16 @@ const ground = new THREE.Mesh(new THREE.IcosahedronGeometry(R, 5), snowMat); gro
 const ice = new THREE.Mesh(new THREE.IcosahedronGeometry(R * 1.002, 3), new THREE.MeshStandardMaterial({ color:'#ccecff', roughness:.65, transparent:true, opacity:.18, flatShading:true })); world.add(ice);
 
 function point(lat, lon, extra=0) { const a=THREE.MathUtils.degToRad(lat), b=THREE.MathUtils.degToRad(lon); const r=R+extra; return new THREE.Vector3(r*Math.cos(a)*Math.sin(b), r*Math.sin(a), r*Math.cos(a)*Math.cos(b)); }
-function place(obj, lat, lon, lift=0) { const p=point(lat,lon,lift); obj.position.copy(p); obj.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),p.clone().normalize()); world.add(obj); return obj; }
+// The planet is deliberately faceted, so its visible surface sits a little inside the mathematical
+// sphere between vertices. Raycast each landmark onto that real surface instead of leaving it to hover.
+const surfaceRaycaster=new THREE.Raycaster();
+function surfacePoint(lat,lon,lift=0){
+  const radial=point(lat,lon).normalize();
+  surfaceRaycaster.set(radial.clone().multiplyScalar(R+3),radial.clone().negate());
+  const hit=surfaceRaycaster.intersectObject(ground,false)[0];
+  return hit ? hit.point.addScaledVector(radial,lift) : point(lat,lon,lift);
+}
+function place(obj, lat, lon, lift=0) { const p=surfacePoint(lat,lon,lift); obj.position.copy(p); obj.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),p.clone().normalize()); world.add(obj); return obj; }
 const blockers=[];
 function placeBlocked(obj,lat,lon,lift,radius){ place(obj,lat,lon,lift); blockers.push({obj,radius}); return obj; }
 function makeTree(scale=1) { const g=new THREE.Group(); const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.10*scale,.15*scale,.7*scale,6),new THREE.MeshStandardMaterial({color:'#77503a',flatShading:true})); trunk.position.y=.35*scale; g.add(trunk); for(let i=0;i<3;i++){const r=(.55-i*.11)*scale, y=(.72+i*.33)*scale; const crown=new THREE.Mesh(new THREE.ConeGeometry(r,.8*scale,7),new THREE.MeshStandardMaterial({color:i===0?'#286a60':'#377d6d',flatShading:true})); crown.position.y=y; crown.castShadow=true; g.add(crown); if(i>0){ const cap=new THREE.Mesh(new THREE.ConeGeometry(r*.72,.18*scale,7),new THREE.MeshStandardMaterial({color:'#f5fbff',roughness:1,flatShading:true})); cap.position.y=y+.34*scale; g.add(cap); } } return g; }
@@ -60,9 +69,10 @@ const leg1=new THREE.Mesh(new THREE.BoxGeometry(.11,.36,.12),new THREE.MeshStand
 // A bright scarf knot marks the explorer's fixed, forward-facing heading.
 const scarf=new THREE.Mesh(new THREE.SphereGeometry(.075,8,6),new THREE.MeshStandardMaterial({color:'#ffd260',flatShading:true}));scarf.position.set(0,.62,.19);avatar.add(scarf);
 
-// Snow particles, gently falling around the camera.
-const flakes=420, pos=new Float32Array(flakes*3); for(let i=0;i<flakes;i++){pos[i*3]=(Math.random()-.5)*20;pos[i*3+1]=(Math.random()-.5)*15;pos[i*3+2]=(Math.random()-.5)*18;}
-const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const snowMaterial=new THREE.PointsMaterial({color:'#fff',size:.07,transparent:true,opacity:.8,sizeAttenuation:true});const snow=new THREE.Points(snowGeo,snowMaterial);scene.add(snow);
+// Snow falls along the camera's visible vertical (the planet's local +Z at the starting view),
+// so it clearly drifts downward rather than reading as motion away from the viewer.
+const flakes=650, pos=new Float32Array(flakes*3); for(let i=0;i<flakes;i++){pos[i*3]=(Math.random()-.5)*22;pos[i*3+1]=(Math.random()-.5)*18;pos[i*3+2]=Math.random()*18-3;}
+const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const snowMaterial=new THREE.PointsMaterial({color:'#fff',size:.105,transparent:true,opacity:.9,sizeAttenuation:true});const snow=new THREE.Points(snowGeo,snowMaterial);scene.add(snow);
 
 const keys={}; let zoom=18.5, targetZoom=18.5, walking=false, elapsed=0, bellCooldown=0;
 const prompt=document.querySelector('#prompt'),toast=document.querySelector('#toast'), view=document.querySelector('#view'), mute=document.querySelector('#mute'), snowfall=document.querySelector('#snowfall');
@@ -94,10 +104,10 @@ function tryMove(amount){
 }
 function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/1000||.016);elapsed=t; const forward=keys.w||keys.arrowup,back=keys.s||keys.arrowdown,left=keys.a||keys.arrowleft,right=keys.d||keys.arrowright;
   // Steering rotates the planet itself, so the explorer never turns away from their forward course.
-  if(left)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),1.55*dt));
-  if(right)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-1.55*dt));
+  if(left)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-1.55*dt));
+  if(right)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),1.55*dt));
   avatar.rotation.y=0;
-  walking=forward||back; const speed=walking?1.05:0; if(forward)tryMove(speed*dt); if(back)tryMove(-speed*.65*dt);
+  walking=forward||back; const speed=walking?1.05:0; if(forward)tryMove(-speed*dt); if(back)tryMove(speed*.65*dt);
   if(walking){const swing=Math.sin(t*.014)*.55;leg1.rotation.x=swing;leg2.rotation.x=-swing;}else{leg1.rotation.x=leg2.rotation.x=0;}
   // Third-person framing lives on the surface's tangent: behind the explorer (positive Y), not above them
   // along the sphere's outward Z axis. The overview smoothly returns to the familiar whole-planet view.
@@ -108,7 +118,7 @@ function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/
   // avoiding a line that cuts through the globe.
   const focus=new THREE.Vector3().lerpVectors(new THREE.Vector3(0,-2,9.8),new THREE.Vector3(0,0,0),overview);
   camera.lookAt(focus);
-  const a=snowGeo.attributes.position.array;for(let i=1;i<a.length;i+=3){a[i]-=dt*(.7+(i%5)*.08);if(a[i]<-7)a[i]=8;}snowGeo.attributes.position.needsUpdate=true;
+  const a=snowGeo.attributes.position.array;for(let i=2;i<a.length;i+=3){a[i]-=dt*(1.45+(i%7)*.09);if(a[i]<-5)a[i]=15;}snowGeo.attributes.position.needsUpdate=true;
   if(bellCooldown>0){bellCooldown-=dt;bell.rotation.z*=.86;} else bell.rotation.z=0;
   const near=bell.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<2.05;prompt.classList.toggle('show',near);
   renderer.render(scene,camera);
