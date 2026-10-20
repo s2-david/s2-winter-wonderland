@@ -61,7 +61,7 @@ const scarf=new THREE.Mesh(new THREE.SphereGeometry(.075,8,6),new THREE.MeshStan
 const flakes=420, pos=new Float32Array(flakes*3); for(let i=0;i<flakes;i++){pos[i*3]=(Math.random()-.5)*20;pos[i*3+1]=(Math.random()-.5)*15;pos[i*3+2]=(Math.random()-.5)*18;}
 const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const snowMaterial=new THREE.PointsMaterial({color:'#fff',size:.07,transparent:true,opacity:.8,sizeAttenuation:true});const snow=new THREE.Points(snowGeo,snowMaterial);scene.add(snow);
 
-const keys={}; let zoom=20, targetZoom=20, walking=false, elapsed=0, bellCooldown=0;
+const keys={}; let zoom=18.5, targetZoom=18.5, walking=false, elapsed=0, bellCooldown=0;
 const prompt=document.querySelector('#prompt'),toast=document.querySelector('#toast'), view=document.querySelector('#view'), mute=document.querySelector('#mute'), snowfall=document.querySelector('#snowfall');
 let muted=false, snowIntensity=Number(snowfall.value)/100;
 snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity)); snowMaterial.opacity=.15+.65*snowIntensity;
@@ -96,8 +96,8 @@ function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/
   avatar.rotation.y=0;
   walking=forward||back; const speed=walking?1.05:0; if(forward)tryMove(speed*dt); if(back)tryMove(-speed*.65*dt);
   if(walking){const swing=Math.sin(t*.014)*.55;leg1.rotation.x=swing;leg2.rotation.x=-swing;}else{leg1.rotation.x=leg2.rotation.x=0;}
-  // A slight upward gaze puts the far curve of the planet on the skyline, like a third-person adventure view.
-  zoom=THREE.MathUtils.lerp(zoom,targetZoom,.08);camera.position.set(0,1.8,zoom);camera.lookAt(0,4,2);
+  // Ground-level third-person framing: the lens sits low behind the explorer and looks over their head.
+  zoom=THREE.MathUtils.lerp(zoom,targetZoom,.08);camera.position.set(0,.2,zoom);camera.lookAt(0,5.5,2);
   const a=snowGeo.attributes.position.array;for(let i=1;i<a.length;i+=3){a[i]-=dt*(.7+(i%5)*.08);if(a[i]<-7)a[i]=8;}snowGeo.attributes.position.needsUpdate=true;
   if(bellCooldown>0){bellCooldown-=dt;bell.rotation.z*=.86;} else bell.rotation.z=0;
   const near=bell.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<2.05;prompt.classList.toggle('show',near);
