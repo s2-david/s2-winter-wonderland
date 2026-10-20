@@ -16,19 +16,27 @@
       .card { position: absolute; left: 26px; bottom: 25px; max-width: 370px; padding: 15px 17px; border: 1px solid rgba(224,245,255,.28); border-radius: 16px; background: rgba(12,25,54,.72); backdrop-filter: blur(10px); box-shadow: 0 10px 40px rgba(0,0,0,.2); }
       .card strong { color: #fff2b4; }
       .card p { margin: 4px 0 0; color: #d9e9f7; font-size: .87rem; line-height: 1.45; }
-      button { pointer-events: auto; position: absolute; top: 25px; right: 26px; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 10px 15px; background: rgba(13,32,68,.75); color: white; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 6px 24px #09142d55; }
+      button { pointer-events: auto; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 10px 15px; background: rgba(13,32,68,.75); color: white; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 6px 24px #09142d55; }
       button:hover, button:focus-visible { background: #284f89; outline: 3px solid #a7dcff; outline-offset: 2px; }
+      #settings { position:absolute; top:25px; right:26px; display:flex; align-items:center; gap:9px; pointer-events:auto; }
+      #settings button { position:static; white-space:nowrap; }
+      .snow-control { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid rgba(255,255,255,.28); border-radius:999px; background:rgba(13,32,68,.75); color:#e9f6ff; font-size:.82rem; font-weight:700; }
+      input[type=range] { accent-color:#cfeeff; width:86px; cursor:pointer; }
       #prompt { position: absolute; left: 50%; bottom: 17%; transform: translateX(-50%); padding: 10px 15px; border-radius: 10px; background: #172a55e8; color: white; font-weight: 750; opacity: 0; transition: opacity .2s, transform .2s; text-align: center; }
       #prompt.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
       #toast { position: absolute; left: 50%; top: 25px; transform: translateX(-50%) translateY(-12px); padding: 10px 15px; border-radius: 999px; background: #f9c95f; color: #352206; font-weight: 800; opacity: 0; transition: .3s; }
       #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-      @media (max-width: 600px) { .brand { top: 16px; left: 16px; } button { top: 16px; right: 16px; } .card { left: 16px; bottom: 16px; right: 16px; } }
+      @media (max-width: 600px) { .brand { top: 16px; left: 16px; } #settings { top:16px; right:16px; gap:5px; } .snow-control span { display:none; } input[type=range] { width:54px; } .card { left: 16px; bottom: 16px; right: 16px; } }
     </style>
   </head>
   <body>
     <div id="hud">
       <div class="brand"><h1>Winter Wonderland</h1><div class="sub">A tiny globe to wander</div></div>
-      <button id="view" aria-label="Toggle full planet view">◌ View planet <span aria-hidden="true">Z</span></button>
+      <div id="settings">
+        <label class="snow-control" for="snowfall"><span>Snowfall</span><input id="snowfall" type="range" min="0" max="100" value="70" aria-label="Snowfall intensity" /></label>
+        <button id="mute" type="button" aria-pressed="false" aria-label="Mute sound">♪ Sound on</button>
+        <button id="view" type="button" aria-label="Toggle full planet view">◌ View planet <span aria-hidden="true">Z</span></button>
+      </div>
       <div class="card"><strong>Explore</strong><p><b>A / D</b> or <b>← / →</b> turn in place. Then hold <b>W</b> or <b>↑</b> to walk forward (or <b>S / ↓</b> to back up). Buildings and trees block your way. Scroll to zoom; find the bell and press <b>E</b>.</p></div>
       <div id="prompt" role="status">Press <b>E</b> to ring the village bell</div>
       <div id="toast" role="status" aria-live="polite">✦ The village sparkles!</div>

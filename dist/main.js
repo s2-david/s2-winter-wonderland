@@ -55,16 +55,20 @@ const leg1=new THREE.Mesh(new THREE.BoxGeometry(.11,.36,.12),new THREE.MeshStand
 
 // Snow particles, gently falling around the camera.
 const flakes=420, pos=new Float32Array(flakes*3); for(let i=0;i<flakes;i++){pos[i*3]=(Math.random()-.5)*20;pos[i*3+1]=(Math.random()-.5)*15;pos[i*3+2]=(Math.random()-.5)*18;}
-const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const snow=new THREE.Points(snowGeo,new THREE.PointsMaterial({color:'#fff',size:.07,transparent:true,opacity:.8,sizeAttenuation:true}));scene.add(snow);
+const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const snowMaterial=new THREE.PointsMaterial({color:'#fff',size:.07,transparent:true,opacity:.8,sizeAttenuation:true});const snow=new THREE.Points(snowGeo,snowMaterial);scene.add(snow);
 
 const keys={}; let zoom=16.5, targetZoom=16.5, walking=false, elapsed=0, bellCooldown=0, heading=0;
-const prompt=document.querySelector('#prompt'),toast=document.querySelector('#toast'), view=document.querySelector('#view');
+const prompt=document.querySelector('#prompt'),toast=document.querySelector('#toast'), view=document.querySelector('#view'), mute=document.querySelector('#mute'), snowfall=document.querySelector('#snowfall');
+let muted=false, snowIntensity=Number(snowfall.value)/100;
+snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity)); snowMaterial.opacity=.15+.65*snowIntensity;
 addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key))e.preventDefault(); if(e.key.toLowerCase()==='z')toggleView(); if(e.key.toLowerCase()==='e')ringBell();});
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 renderer.domElement.addEventListener('wheel',e=>{targetZoom=THREE.MathUtils.clamp(targetZoom+e.deltaY*.008,8.5,19);},{passive:true});
 view.addEventListener('click',toggleView); function toggleView(){targetZoom=targetZoom>13?11:18;}
+mute.addEventListener('click',()=>{muted=!muted;mute.setAttribute('aria-pressed',String(muted));mute.textContent=muted?'◌ Sound off':'♪ Sound on';});
+snowfall.addEventListener('input',()=>{snowIntensity=Number(snowfall.value)/100;snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity));snowMaterial.opacity=.15+.65*snowIntensity;});
 function ringBell(){const bellWorld=bell.getWorldPosition(new THREE.Vector3()); if(bellWorld.distanceTo(hero.position)<2.05){bell.rotation.z=.38; bellCooldown=1.1; jingle(); toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1900);} }
-function jingle(){ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const t=ctx.currentTime; [880,1175,1568].forEach((f,i)=>{let o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(.0001,t+i*.12);g.gain.exponentialRampToValueAtTime(.16,t+i*.12+.015);g.gain.exponentialRampToValueAtTime(.0001,t+i*.12+.55);o.start(t+i*.12);o.stop(t+i*.12+.58);}); }
+function jingle(){ if(muted)return; const ctx=new (window.AudioContext||window.webkitAudioContext)(); const t=ctx.currentTime; [880,1175,1568].forEach((f,i)=>{let o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(.0001,t+i*.12);g.gain.exponentialRampToValueAtTime(.16,t+i*.12+.015);g.gain.exponentialRampToValueAtTime(.0001,t+i*.12+.55);o.start(t+i*.12);o.stop(t+i*.12+.58);}); }
 function wouldHitBlocker(){ world.updateMatrixWorld(true); return blockers.some(({obj,radius})=>obj.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<radius+.23); }
 function tryMove(amount){ const old=world.quaternion.clone(); const direction=new THREE.Vector3(Math.sin(heading),Math.cos(heading),0); const axis=new THREE.Vector3(0,0,1).cross(direction).normalize(); world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axis,-amount)); if(wouldHitBlocker()) world.quaternion.copy(old); }
 function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/1000||.016);elapsed=t; const forward=keys.w||keys.arrowup,back=keys.s||keys.arrowdown,left=keys.a||keys.arrowleft,right=keys.d||keys.arrowright;
