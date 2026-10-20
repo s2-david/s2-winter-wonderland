@@ -33,7 +33,7 @@ function surfacePoint(lat,lon,lift=0){
   const hit=surfaceRaycaster.intersectObject(ground,false)[0];
   return hit ? hit.point.addScaledVector(radial,lift) : point(lat,lon,lift);
 }
-function place(obj, lat, lon, lift=0) { const p=surfacePoint(lat,lon,lift); obj.position.copy(p); obj.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),p.clone().normalize()); world.add(obj); return obj; }
+function place(obj, lat, lon, lift=0, embed=.13) { const p=surfacePoint(lat,lon,lift-embed); obj.position.copy(p); obj.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),p.clone().normalize()); world.add(obj); return obj; }
 const blockers=[];
 function placeBlocked(obj,lat,lon,lift,radius){ place(obj,lat,lon,lift); blockers.push({obj,radius}); return obj; }
 function makeTree(scale=1) { const g=new THREE.Group(); const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.10*scale,.15*scale,.7*scale,6),new THREE.MeshStandardMaterial({color:'#77503a',flatShading:true})); trunk.position.y=.35*scale; g.add(trunk); for(let i=0;i<3;i++){const r=(.55-i*.11)*scale, y=(.72+i*.33)*scale; const crown=new THREE.Mesh(new THREE.ConeGeometry(r,.8*scale,7),new THREE.MeshStandardMaterial({color:i===0?'#286a60':'#377d6d',flatShading:true})); crown.position.y=y; crown.castShadow=true; g.add(crown); if(i>0){ const cap=new THREE.Mesh(new THREE.ConeGeometry(r*.72,.18*scale,7),new THREE.MeshStandardMaterial({color:'#f5fbff',roughness:1,flatShading:true})); cap.position.y=y+.34*scale; g.add(cap); } } return g; }
@@ -41,7 +41,7 @@ function makeHouse(color) { const g=new THREE.Group(); const walls=new THREE.Mes
 function makePathDot(){return new THREE.Mesh(new THREE.CylinderGeometry(.2,.25,.035,8),new THREE.MeshStandardMaterial({color:'#b7d3dd',roughness:1,flatShading:true}));}
 
 // A curved breadcrumb path and a warm village near the starting location.
-for(let i=0;i<24;i++){ const lat=-8+Math.sin(i*.42)*5, lon=-36+i*3.2; place(makePathDot(),lat,lon,.045); }
+for(let i=0;i<24;i++){ const lat=-8+Math.sin(i*.42)*5, lon=-36+i*3.2; place(makePathDot(),lat,lon,.055,0); }
 // The first ten degrees around the explorer are a deliberately obstacle-free snow plaza.
 [[9,-12,1.0],[12,10,.83],[-8,15,.85],[17,-18,.72],[-16,-18,.9],[3,29,.75],[-20,28,.85],[-3,-37,.76]].forEach(([a,b,s])=>placeBlocked(makeTree(s),a,b,.04,.27+s*.18));
 [['#df6d61',11,9],['#e8a85e',8,17],['#7b9bd0',-5,13],['#bf789a',14,-10],['#77aab2',-13,23],['#d68c58',19,22],['#9c6bb0',-19,-25]].forEach(([c,a,b])=>placeBlocked(makeHouse(c),a,b,.05,.55));
@@ -75,15 +75,28 @@ const flakes=650, pos=new Float32Array(flakes*3); for(let i=0;i<flakes;i++){pos[
 const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const snowMaterial=new THREE.PointsMaterial({color:'#fff',size:.105,transparent:true,opacity:.9,sizeAttenuation:true});const snow=new THREE.Points(snowGeo,snowMaterial);scene.add(snow);
 
 const keys={}; let zoom=18.5, targetZoom=18.5, walking=false, elapsed=0, bellCooldown=0;
-const prompt=document.querySelector('#prompt'),toast=document.querySelector('#toast'), view=document.querySelector('#view'), mute=document.querySelector('#mute'), snowfall=document.querySelector('#snowfall');
-let muted=false, snowIntensity=Number(snowfall.value)/100;
-snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity)); snowMaterial.opacity=.15+.65*snowIntensity;
+const prompt=document.querySelector('#prompt'),toast=document.querySelector('#toast'), view=document.querySelector('#view'), mute=document.querySelector('#mute'), tune=document.querySelector('#tune'), tuner=document.querySelector('#tuner');
+const walkSpeed=document.querySelector('#walkSpeed'),turnSpeed=document.querySelector('#turnSpeed'),heroHeight=document.querySelector('#heroHeight'),snowDensity=document.querySelector('#snowDensity'),snowSize=document.querySelector('#snowSize'),snowSpeed=document.querySelector('#snowSpeed');
+const controlValues=[walkSpeed,turnSpeed,heroHeight,snowDensity,snowSize,snowSpeed];
+let muted=false, snowIntensity=Number(snowDensity.value)/100;
+function updateTuning(){
+  document.querySelector('#walkSpeedValue').textContent=`${Number(walkSpeed.value).toFixed(2)}×`;
+  document.querySelector('#turnSpeedValue').textContent=`${Number(turnSpeed.value).toFixed(2)}×`;
+  document.querySelector('#heroHeightValue').textContent=Number(heroHeight.value).toFixed(2);
+  document.querySelector('#snowDensityValue').textContent=`${snowDensity.value}%`;
+  document.querySelector('#snowSizeValue').textContent=Number(snowSize.value).toFixed(2);
+  document.querySelector('#snowSpeedValue').textContent=Number(snowSpeed.value).toFixed(2);
+  snowIntensity=Number(snowDensity.value)/100;
+  snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity)); snowMaterial.opacity=.15+.75*snowIntensity; snowMaterial.size=Number(snowSize.value);
+  hero.position.z=R+Number(heroHeight.value);
+}
+controlValues.forEach(control=>control.addEventListener('input',updateTuning)); updateTuning();
 addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key))e.preventDefault(); if(e.key.toLowerCase()==='z')toggleView(); if(e.key.toLowerCase()==='e')ringBell();});
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 renderer.domElement.addEventListener('wheel',e=>{targetZoom=THREE.MathUtils.clamp(targetZoom+e.deltaY*.014,13.5,36);},{passive:true});
 view.addEventListener('click',toggleView); function toggleView(){targetZoom=targetZoom>25?16:34;}
 mute.addEventListener('click',()=>{muted=!muted;mute.setAttribute('aria-pressed',String(muted));mute.textContent=muted?'◌ Sound off':'♪ Sound on';});
-snowfall.addEventListener('input',()=>{snowIntensity=Number(snowfall.value)/100;snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity));snowMaterial.opacity=.15+.65*snowIntensity;});
+tune.addEventListener('click',()=>{const open=tuner.classList.toggle('open');tune.setAttribute('aria-expanded',String(open));});
 function ringBell(){const bellWorld=bell.getWorldPosition(new THREE.Vector3()); if(bellWorld.distanceTo(hero.position)<2.05){bell.rotation.z=.38; bellCooldown=1.1; jingle(); toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1900);} }
 function jingle(){ if(muted)return; const ctx=new (window.AudioContext||window.webkitAudioContext)(); const t=ctx.currentTime; [880,1175,1568].forEach((f,i)=>{let o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(.0001,t+i*.12);g.gain.exponentialRampToValueAtTime(.16,t+i*.12+.015);g.gain.exponentialRampToValueAtTime(.0001,t+i*.12+.55);o.start(t+i*.12);o.stop(t+i*.12+.58);}); }
 function wouldHitBlocker(){ world.updateMatrixWorld(true); return blockers.some(({obj,radius})=>obj.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<radius+.21); }
@@ -104,10 +117,11 @@ function tryMove(amount){
 }
 function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/1000||.016);elapsed=t; const forward=keys.w||keys.arrowup,back=keys.s||keys.arrowdown,left=keys.a||keys.arrowleft,right=keys.d||keys.arrowright;
   // Steering rotates the planet itself, so the explorer never turns away from their forward course.
-  if(left)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-1.55*dt));
-  if(right)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),1.55*dt));
+  const turnRate=1.55*Number(turnSpeed.value);
+  if(left)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-turnRate*dt));
+  if(right)world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),turnRate*dt));
   avatar.rotation.y=0;
-  walking=forward||back; const speed=walking?1.05:0; if(forward)tryMove(-speed*dt); if(back)tryMove(speed*.65*dt);
+  walking=forward||back; const speed=walking?1.05*Number(walkSpeed.value):0; if(forward)tryMove(-speed*dt); if(back)tryMove(speed*.65*dt);
   if(walking){const swing=Math.sin(t*.014)*.55;leg1.rotation.x=swing;leg2.rotation.x=-swing;}else{leg1.rotation.x=leg2.rotation.x=0;}
   // Third-person framing lives on the surface's tangent: behind the explorer (positive Y), not above them
   // along the sphere's outward Z axis. The overview smoothly returns to the familiar whole-planet view.
@@ -118,7 +132,7 @@ function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/
   // avoiding a line that cuts through the globe.
   const focus=new THREE.Vector3().lerpVectors(new THREE.Vector3(0,-2,9.8),new THREE.Vector3(0,0,0),overview);
   camera.lookAt(focus);
-  const a=snowGeo.attributes.position.array;for(let i=2;i<a.length;i+=3){a[i]-=dt*(1.45+(i%7)*.09);if(a[i]<-5)a[i]=15;}snowGeo.attributes.position.needsUpdate=true;
+  const a=snowGeo.attributes.position.array;for(let i=2;i<a.length;i+=3){a[i]-=dt*(Number(snowSpeed.value)+(i%7)*.09);if(a[i]<-5)a[i]=15;}snowGeo.attributes.position.needsUpdate=true;
   if(bellCooldown>0){bellCooldown-=dt;bell.rotation.z*=.86;} else bell.rotation.z=0;
   const near=bell.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<2.05;prompt.classList.toggle('show',near);
   renderer.render(scene,camera);

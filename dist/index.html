@@ -22,6 +22,13 @@
       #settings button { position:static; white-space:nowrap; }
       .snow-control { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid rgba(255,255,255,.28); border-radius:999px; background:rgba(13,32,68,.75); color:#e9f6ff; font-size:.82rem; font-weight:700; }
       input[type=range] { accent-color:#cfeeff; width:86px; cursor:pointer; }
+      #tuner { position:absolute; top:78px; right:26px; width:270px; padding:14px 15px; border:1px solid rgba(224,245,255,.28); border-radius:16px; background:rgba(12,25,54,.88); backdrop-filter:blur(12px); box-shadow:0 12px 42px rgba(0,0,0,.28); opacity:0; transform:translateY(-8px); pointer-events:none; transition:.2s; }
+      #tuner.open { opacity:1; transform:translateY(0); pointer-events:auto; }
+      #tuner h2 { margin:0 0 3px; font-size:1rem; color:#fff2b4; }
+      #tuner p { margin:0 0 11px; color:#b9d7ec; font-size:.74rem; line-height:1.35; }
+      .tune-row { display:grid; grid-template-columns:92px 1fr 34px; align-items:center; gap:7px; margin:8px 0; color:#e9f6ff; font-size:.78rem; font-weight:700; }
+      .tune-row input { width:100%; }
+      .tune-value { color:#bde9ff; font-variant-numeric:tabular-nums; text-align:right; }
       #prompt { position: absolute; left: 50%; bottom: 17%; transform: translateX(-50%); padding: 10px 15px; border-radius: 10px; background: #172a55e8; color: white; font-weight: 750; opacity: 0; transition: opacity .2s, transform .2s; text-align: center; }
       #prompt.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
       #toast { position: absolute; left: 50%; top: 25px; transform: translateX(-50%) translateY(-12px); padding: 10px 15px; border-radius: 999px; background: #f9c95f; color: #352206; font-weight: 800; opacity: 0; transition: .3s; }
@@ -33,10 +40,19 @@
     <div id="hud">
       <div class="brand"><h1>Winter Wonderland</h1><div class="sub">A tiny globe to wander</div></div>
       <div id="settings">
-        <label class="snow-control" for="snowfall"><span>Snowfall</span><input id="snowfall" type="range" min="0" max="100" value="70" aria-label="Snowfall intensity" /></label>
+        <button id="tune" type="button" aria-expanded="false" aria-controls="tuner">☷ Tune scene</button>
         <button id="mute" type="button" aria-pressed="false" aria-label="Mute sound">♪ Sound on</button>
         <button id="view" type="button" aria-label="Toggle full planet view">◌ View planet <span aria-hidden="true">Z</span></button>
       </div>
+      <aside id="tuner" aria-label="Prototype scene tuning">
+        <h2>Prototype tuning</h2><p>Temporary creative controls — these will not ship in the final experience.</p>
+        <label class="tune-row" for="walkSpeed"><span>Walk speed</span><input id="walkSpeed" type="range" min="0.2" max="2" value="0.5" step="0.01" /><output id="walkSpeedValue" class="tune-value">0.50×</output></label>
+        <label class="tune-row" for="turnSpeed"><span>Turn speed</span><input id="turnSpeed" type="range" min="0.2" max="2" value="0.5" step="0.01" /><output id="turnSpeedValue" class="tune-value">0.50×</output></label>
+        <label class="tune-row" for="heroHeight"><span>Hero height</span><input id="heroHeight" type="range" min="0" max="0.6" value="0.12" step="0.01" /><output id="heroHeightValue" class="tune-value">0.12</output></label>
+        <label class="tune-row" for="snowDensity"><span>Snow density</span><input id="snowDensity" type="range" min="0" max="100" value="70" step="1" /><output id="snowDensityValue" class="tune-value">70%</output></label>
+        <label class="tune-row" for="snowSize"><span>Snow size</span><input id="snowSize" type="range" min="0.03" max="0.24" value="0.105" step="0.005" /><output id="snowSizeValue" class="tune-value">0.11</output></label>
+        <label class="tune-row" for="snowSpeed"><span>Snow speed</span><input id="snowSpeed" type="range" min="0.2" max="3.5" value="1.45" step="0.05" /><output id="snowSpeedValue" class="tune-value">1.45</output></label>
+      </aside>
       <div class="card"><strong>Explore</strong><p>The explorer always faces forward. Use <b>A / D</b> or <b>← / →</b> to steer the planet beneath them, then hold <b>W</b> or <b>↑</b> to travel straight ahead (or <b>S / ↓</b> to back up). They gently slide around obstacles. Scroll to zoom; find the bell and press <b>E</b>.</p></div>
       <div id="prompt" role="status">Press <b>E</b> to ring the village bell</div>
       <div id="toast" role="status" aria-live="polite">✦ The village sparkles!</div>
