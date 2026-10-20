@@ -14,7 +14,8 @@ const sun = new THREE.DirectionalLight('#ffe1a5', 2.6); sun.position.set(-8, 10,
 const moon = new THREE.DirectionalLight('#94bcff', 1.1); moon.position.set(8, 3, -5); scene.add(moon);
 
 const world = new THREE.Group(); scene.add(world);
-const R = 5;
+// A larger planet gives the village room to breathe and makes forward travel feel like exploration.
+const R = 10;
 const snowMat = new THREE.MeshStandardMaterial({ color: '#eaf6ff', roughness: .9, flatShading: true });
 const ground = new THREE.Mesh(new THREE.IcosahedronGeometry(R, 5), snowMat); ground.receiveShadow = true; world.add(ground);
 const ice = new THREE.Mesh(new THREE.IcosahedronGeometry(R * 1.002, 3), new THREE.MeshStandardMaterial({ color:'#ccecff', roughness:.65, transparent:true, opacity:.18, flatShading:true })); world.add(ice);
@@ -60,14 +61,14 @@ const scarf=new THREE.Mesh(new THREE.SphereGeometry(.075,8,6),new THREE.MeshStan
 const flakes=420, pos=new Float32Array(flakes*3); for(let i=0;i<flakes;i++){pos[i*3]=(Math.random()-.5)*20;pos[i*3+1]=(Math.random()-.5)*15;pos[i*3+2]=(Math.random()-.5)*18;}
 const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const snowMaterial=new THREE.PointsMaterial({color:'#fff',size:.07,transparent:true,opacity:.8,sizeAttenuation:true});const snow=new THREE.Points(snowGeo,snowMaterial);scene.add(snow);
 
-const keys={}; let zoom=16.5, targetZoom=16.5, walking=false, elapsed=0, bellCooldown=0;
+const keys={}; let zoom=26.5, targetZoom=26.5, walking=false, elapsed=0, bellCooldown=0;
 const prompt=document.querySelector('#prompt'),toast=document.querySelector('#toast'), view=document.querySelector('#view'), mute=document.querySelector('#mute'), snowfall=document.querySelector('#snowfall');
 let muted=false, snowIntensity=Number(snowfall.value)/100;
 snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity)); snowMaterial.opacity=.15+.65*snowIntensity;
 addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key))e.preventDefault(); if(e.key.toLowerCase()==='z')toggleView(); if(e.key.toLowerCase()==='e')ringBell();});
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-renderer.domElement.addEventListener('wheel',e=>{targetZoom=THREE.MathUtils.clamp(targetZoom+e.deltaY*.008,8.5,19);},{passive:true});
-view.addEventListener('click',toggleView); function toggleView(){targetZoom=targetZoom>13?11:18;}
+renderer.domElement.addEventListener('wheel',e=>{targetZoom=THREE.MathUtils.clamp(targetZoom+e.deltaY*.014,13.5,36);},{passive:true});
+view.addEventListener('click',toggleView); function toggleView(){targetZoom=targetZoom>25?16:34;}
 mute.addEventListener('click',()=>{muted=!muted;mute.setAttribute('aria-pressed',String(muted));mute.textContent=muted?'◌ Sound off':'♪ Sound on';});
 snowfall.addEventListener('input',()=>{snowIntensity=Number(snowfall.value)/100;snowGeo.setDrawRange(0,Math.round(flakes*snowIntensity));snowMaterial.opacity=.15+.65*snowIntensity;});
 function ringBell(){const bellWorld=bell.getWorldPosition(new THREE.Vector3()); if(bellWorld.distanceTo(hero.position)<2.05){bell.rotation.z=.38; bellCooldown=1.1; jingle(); toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1900);} }
@@ -95,7 +96,7 @@ function loop(t){requestAnimationFrame(loop); const dt=Math.min(.05,(t-elapsed)/
   avatar.rotation.y=0;
   walking=forward||back; const speed=walking?1.05:0; if(forward)tryMove(speed*dt); if(back)tryMove(-speed*.65*dt);
   if(walking){const swing=Math.sin(t*.014)*.55;leg1.rotation.x=swing;leg2.rotation.x=-swing;}else{leg1.rotation.x=leg2.rotation.x=0;}
-  zoom=THREE.MathUtils.lerp(zoom,targetZoom,.08);camera.position.set(0,2.35,zoom);camera.lookAt(0,0,0);
+  zoom=THREE.MathUtils.lerp(zoom,targetZoom,.08);camera.position.set(0,4.7,zoom);camera.lookAt(0,0,0);
   const a=snowGeo.attributes.position.array;for(let i=1;i<a.length;i+=3){a[i]-=dt*(.7+(i%5)*.08);if(a[i]<-7)a[i]=8;}snowGeo.attributes.position.needsUpdate=true;
   if(bellCooldown>0){bellCooldown-=dt;bell.rotation.z*=.86;} else bell.rotation.z=0;
   const near=bell.getWorldPosition(new THREE.Vector3()).distanceTo(hero.position)<2.05;prompt.classList.toggle('show',near);
