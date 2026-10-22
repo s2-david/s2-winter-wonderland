@@ -5,15 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#101b3a" />
     <title>Winter Wonderland Planet</title>
-    <script type="module" crossorigin src="./assets/index-DXDLaDd9.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-3NF6eRnC.css">
+    <script type="module" crossorigin src="./assets/index-rB3Os5nc.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-vTSp4xTd.css">
   </head>
   <body>
     <div id="hud">
       <div class="brand"><h1>Winter Wonderland</h1><div class="sub">A tiny globe to wander</div></div>
       <div id="settings">
-        <button id="mute" type="button" aria-pressed="false" aria-label="Mute sound">♪ Sound on</button>
-        <button id="view" type="button" aria-label="Toggle full planet view">◌ View planet <span aria-hidden="true">Z</span></button>
+        <button id="mute" class="icon-button" type="button" aria-pressed="false" aria-label="Mute sound" title="Mute sound">
+          <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" /></svg>
+          <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" /></svg>
+        </button>
+        <button id="view" class="icon-button" type="button" aria-label="Toggle full planet view" title="View planet (Z)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" /><ellipse cx="12" cy="12" rx="10.5" ry="3.5" transform="rotate(-20 12 12)" /></svg>
+        </button>
       </div>
       <div class="card">
         <strong>Explore</strong>
@@ -21,7 +26,10 @@
         <p class="touch-only">Drag the joystick up to walk and sideways to steer. Pinch to zoom, and find the village bell.</p>
       </div>
       <div id="prompt" role="status">Press <b>E</b> to ring the village bell</div>
-      <div id="joystick" aria-hidden="true"><div class="knob"></div></div>
+      <div id="joystick" aria-hidden="true">
+        <svg class="arrows" viewBox="0 0 128 128"><path d="M56 22l8-9 8 9M56 106l8 9 8-9M22 56l-9 8 9 8M106 56l9 8-9 8" /></svg>
+        <div class="knob"></div>
+      </div>
       <button id="bellButton" type="button" disabled>🔔 Ring bell</button>
       <div id="toast" role="status" aria-live="polite">✦ The village sparkles!</div>
     </div>

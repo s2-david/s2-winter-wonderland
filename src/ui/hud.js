@@ -12,7 +12,7 @@ mute.addEventListener('click', () => {
   muted = !muted;
   setMuted(muted);
   mute.setAttribute('aria-pressed', String(muted));
-  mute.textContent = muted ? '◌ Sound off' : '♪ Sound on';
+  mute.title = muted ? 'Unmute sound' : 'Mute sound';
 });
 
 view.addEventListener('click', toggleView);
