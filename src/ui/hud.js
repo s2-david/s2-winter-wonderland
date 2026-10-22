@@ -2,6 +2,7 @@ import { setMuted } from '../audio.js';
 import { toggleView } from '../cameraRig.js';
 
 const prompt = document.querySelector('#prompt');
+const bellButton = document.querySelector('#bellButton');
 const toast = document.querySelector('#toast');
 const view = document.querySelector('#view');
 const mute = document.querySelector('#mute');
@@ -16,8 +17,17 @@ mute.addEventListener('click', () => {
 
 view.addEventListener('click', toggleView);
 
+export function onBellButton(fn) {
+  bellButton.addEventListener('click', fn);
+}
+
+let bellShown = false;
 export function showBellPrompt(show) {
+  if (show === bellShown) return;
+  bellShown = show;
   prompt.classList.toggle('show', show);
+  bellButton.classList.toggle('show', show);
+  bellButton.disabled = !show;
 }
 
 export function showToast() {

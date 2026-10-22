@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { R, tuning } from './config.js';
 import { world, blockers } from './world/planet.js';
-import { keys } from './input.js';
+import { moveIntent } from './input.js';
 
 // Explorer stays planted and always faces the forward screen direction while the planet moves underneath.
 export const hero = new THREE.Group();
@@ -66,18 +66,17 @@ function tryMove(amount) {
 }
 
 export function updatePlayer(dt, t) {
-  const forward = keys.w || keys.arrowup, back = keys.s || keys.arrowdown;
-  const left = keys.a || keys.arrowleft, right = keys.d || keys.arrowright;
+  const { forward, turn } = moveIntent();
 
   // Steering rotates the planet itself, so the explorer never turns away from their forward course.
   const turnRate = 1.55 * tuning.turnSpeed;
-  if (left) world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -turnRate * dt));
-  if (right) world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), turnRate * dt));
+  if (turn) world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), turnRate * turn * dt));
 
-  const walking = forward || back;
-  const speed = walking ? 1.05 * tuning.walkSpeed : 0;
-  if (forward) tryMove(-speed * dt);
-  if (back) tryMove(speed * 0.65 * dt);
+  // Backing up is slower than walking forward. The joystick scales speed by how far it's pushed.
+  const walking = forward !== 0;
+  const speed = 1.05 * tuning.walkSpeed;
+  if (forward > 0) tryMove(-speed * forward * dt);
+  if (forward < 0) tryMove(speed * 0.65 * -forward * dt);
 
   if (walking) {
     const swing = Math.sin(t * 0.014) * 0.55;

@@ -4,9 +4,36 @@ import { camera, renderer } from './stage.js';
 
 let zoom = ZOOM.start, targetZoom = ZOOM.start;
 
-renderer.domElement.addEventListener('wheel', e => {
-  targetZoom = THREE.MathUtils.clamp(targetZoom + e.deltaY * 0.014, ZOOM.min, ZOOM.max);
-}, { passive: true });
+// Positive amounts pull back toward the planet view; negative amounts move in close.
+export function zoomBy(amount) {
+  targetZoom = THREE.MathUtils.clamp(targetZoom + amount, ZOOM.min, ZOOM.max);
+}
+
+renderer.domElement.addEventListener('wheel', e => zoomBy(e.deltaY * 0.014), { passive: true });
+
+// Two-finger pinch on the scene zooms: spreading fingers moves in, pinching together pulls back.
+const touches = new Map();
+let pinchDistance = 0;
+const fingerGap = () => {
+  const [a, b] = [...touches.values()];
+  return Math.hypot(a.x - b.x, a.y - b.y);
+};
+renderer.domElement.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch') return;
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size === 2) pinchDistance = fingerGap();
+});
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!touches.has(e.pointerId)) return;
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size !== 2) return;
+  const gap = fingerGap();
+  zoomBy((pinchDistance - gap) * 0.06);
+  pinchDistance = gap;
+});
+const endTouch = e => touches.delete(e.pointerId);
+renderer.domElement.addEventListener('pointerup', endTouch);
+renderer.domElement.addEventListener('pointercancel', endTouch);
 
 export function toggleView() {
   targetZoom = targetZoom > 25 ? ZOOM.close : ZOOM.wide;

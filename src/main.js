@@ -9,7 +9,8 @@ import { toggleView, updateCamera } from './cameraRig.js';
 import { snow, applySnowTuning, updateSnow } from './snow.js';
 import { jingle } from './audio.js';
 import { onKey } from './input.js';
-import { showBellPrompt, showToast } from './ui/hud.js';
+import { showBellPrompt, showToast, onBellButton } from './ui/hud.js';
+import './ui/touch.js';
 
 scene.add(world);
 buildVillage();
@@ -38,6 +39,7 @@ function ringBell() {
 
 onKey('z', toggleView);
 onKey('e', ringBell);
+onBellButton(ringBell);
 
 let elapsed = 0;
 function loop(t) {
