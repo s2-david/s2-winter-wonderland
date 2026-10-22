@@ -3,3 +3,6 @@ dist/
 CLAUDE.local.md
 .claude/settings.local.json
 .DS_Store
+art/blender/renders/
+*.blend
+*.blend1

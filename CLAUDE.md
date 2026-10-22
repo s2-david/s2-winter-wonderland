@@ -39,6 +39,7 @@ Vanilla Three.js (pinned to `0.161.0`) bundled with Vite. No UI framework. See t
 - Input: keyboard and the on-screen joystick both feed `moveIntent()` in `src/input.js`. Arrow keys move; E is the action key; Z toggles zoom. WASD is intentionally not supported.
 - Tunable values live in `tuning` in `src/config.js`. The tuning panel (`src/debug/tuner.js`) shows for everyone while `SHOW_TUNER` is `true`; otherwise only with `?debug`. Its "Copy values" button produces JSON to paste back into `tuning` as new defaults.
 - Touch UI: `body.touch` is set on touch devices (`src/ui/touch.js`). Use `.touch-only` / `.keys-only` for content that differs between phone and desktop.
+- Authored models are built in Blender from scripts in `art/blender/` and exported as GLB into `src/world/models/`, with colour and ambient occlusion baked into one texture and glow kept as emissive materials (no lights). Import them with `?url` so Vite hashes them. See `art/blender/README.md`.
 - The planned structure for multiple villages (each village as its own lazily loaded module, loaded by distance) is in `docs/roadmap.md`.
 
 ## Conventions
@@ -57,7 +58,7 @@ The planet will grow to 5–6 detailed villages, so keep an eye on cost from the
 - Triangles per frame: under 300k
 - Frame rate: 60 fps on desktop, 30+ fps on a mid-range phone
 
-Current baseline (one village): about 100 draw calls and 3,700 triangles.
+Current baseline (one village, measured 2026-10-22 with `renderer.info` after one render, shadow pass included): about 130 draw calls and 12k triangles in the close view; about 280 draw calls and 15k triangles in the wide planet view, which is already over budget, mostly from un-instanced trees.
 
 - Share materials and geometry between repeated objects; use instancing for anything that repeats a lot (trees, rocks, lamps).
 - Avoid adding real-time point lights. Each one is computed for every pixel. Prefer emissive materials or baked lighting.
