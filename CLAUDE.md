@@ -58,9 +58,17 @@ The planet will grow to 5–6 detailed villages, so keep an eye on cost from the
 - Triangles per frame: under 300k
 - Frame rate: 60 fps on desktop, 30+ fps on a mid-range phone
 
-Current baseline (one village, measured 2026-10-22 with `renderer.info` after one render, shadow pass included): about 130 draw calls and 12k triangles in the close view; about 280 draw calls and 15k triangles in the wide planet view, which is already over budget, mostly from un-instanced trees.
+Current baseline (one village, measured 2026-10-22 with `renderer.info` after one render, shadow pass included): about 46 draw calls and 15k triangles in the close view; about 55 draw calls and 15k triangles in the wide planet view. Trees and path dots are instanced; the houses (one draw call per part, plus a point light each) are now the largest remaining cost.
 
-- Share materials and geometry between repeated objects; use instancing for anything that repeats a lot (trees, rocks, lamps).
+To measure, run this in the dev server's console, with the camera at (0, 4.7, 34) looking at the origin for the wide view, or at (0, 4.5, 12.2) looking at (0, -2, 9.8) for the close view:
+
+```js
+const { scene, camera, renderer } = await import('/src/stage.js');
+camera.position.set(0, 4.7, 34); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
+renderer.render(scene, camera); renderer.info.render; // { calls, triangles, ... }
+```
+
+- Share materials and geometry between repeated objects; use instancing for anything that repeats a lot (trees, rocks, lamps). `instanced(model, capacity)` in `src/world/props.js` turns a model group into a factory of anchors that `place()` / `placeBlocked()` position as usual, drawn with one `InstancedMesh` per part.
 - Avoid adding real-time point lights. Each one is computed for every pixel. Prefer emissive materials or baked lighting.
 - Dispose of geometry, materials and textures when removing objects.
 
