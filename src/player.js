@@ -11,7 +11,7 @@ hero.rotation.x = Math.PI / 2;
 const avatar = new THREE.Group();
 hero.add(avatar);
 
-const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.42, 4, 8), new THREE.MeshStandardMaterial({ color: '#e9575b', flatShading: true }));
+const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.42, 4, 8), new THREE.MeshStandardMaterial({ color: '#9c6bb0', flatShading: true }));
 body.rotation.x = Math.PI / 2;
 body.position.y = 0.35;
 avatar.add(body);
@@ -19,14 +19,6 @@ avatar.add(body);
 const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 8), new THREE.MeshStandardMaterial({ color: '#f5c7a9', flatShading: true }));
 head.position.y = 0.73;
 avatar.add(head);
-
-const hat = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.38, 8), new THREE.MeshStandardMaterial({ color: '#d83c47', flatShading: true }));
-hat.position.y = 0.99;
-avatar.add(hat);
-
-const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.05, 12), new THREE.MeshStandardMaterial({ color: '#f4f8ff' }));
-brim.position.y = 0.82;
-avatar.add(brim);
 
 const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.36, 0.12), new THREE.MeshStandardMaterial({ color: '#3b557c' })), leg2 = leg1.clone();
 leg1.position.set(-0.1, 0.1, 0);
