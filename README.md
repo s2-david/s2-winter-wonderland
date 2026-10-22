@@ -39,7 +39,7 @@ src/
   styles.css
 ```
 
-`dist/` is build output. Don't edit it by hand; run `npm run build`.
+`dist/` is build output and isn't committed. Vercel runs `npm run build` on every push and deploys the result; `main` goes to production, other branches get preview links.
 
 ## Controls
 
