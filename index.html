@@ -20,9 +20,32 @@
         </button>
       </div>
       <div class="card">
-        <strong>Explore</strong>
-        <p class="keys-only">The explorer always faces forward. Use <b>A / D</b> or <b>← / →</b> to steer the planet beneath them, then hold <b>W</b> or <b>↑</b> to travel straight ahead (or <b>S / ↓</b> to back up). They gently slide around obstacles. Scroll to zoom; find the bell and press <b>E</b>.</p>
-        <p class="touch-only">Drag the joystick up to walk and sideways to steer. Pinch to zoom, and find the village bell.</p>
+        <div class="hints keys-only">
+          <div class="arrow-keys" role="img" aria-label="Arrow keys to walk and steer">
+            <kbd class="up">↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>
+          </div>
+          <div class="hint">Press <kbd>E</kbd> for actions</div>
+          <div class="hint">
+            <!-- Lucide "mouse" icon (ISC license, lucide.dev) -->
+            <svg class="hint-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="7" /><path d="M12 6v4" /></svg>
+            Scroll to zoom
+          </div>
+        </div>
+        <!-- Lucide "joystick", "move-diagonal" and "bell" icons (ISC license, lucide.dev) -->
+        <div class="touch-hints touch-only">
+          <div class="touch-hint">
+            <svg class="hint-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 17a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2Z" /><path d="M6 15v-2" /><path d="M12 15V9" /><circle cx="12" cy="6" r="3" /></svg>
+            Drag to walk
+          </div>
+          <div class="touch-hint">
+            <svg class="hint-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 19H5v-6" /><path d="M13 5h6v6" /><path d="M19 5 5 19" /></svg>
+            Pinch to zoom
+          </div>
+          <div class="touch-hint">
+            <svg class="hint-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /></svg>
+            Tap for actions
+          </div>
+        </div>
       </div>
       <div id="prompt" role="status">Press <b>E</b> to ring the village bell</div>
       <div id="joystick" aria-hidden="true">

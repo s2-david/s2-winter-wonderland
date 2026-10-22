@@ -1,5 +1,5 @@
 import './styles.css';
-import { BELL_RANGE } from './config.js';
+import { BELL_RANGE, SHOW_TUNER } from './config.js';
 import { scene, camera, renderer } from './stage.js';
 import { world } from './world/planet.js';
 import { buildVillage } from './world/village.js';
@@ -24,7 +24,7 @@ function applyTuning() {
 }
 applyTuning();
 
-if (new URLSearchParams(location.search).has('debug')) {
+if (SHOW_TUNER || new URLSearchParams(location.search).has('debug')) {
   import('./debug/tuner.js').then(({ mountTuner }) => mountTuner(applyTuning));
 }
 

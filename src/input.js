@@ -1,4 +1,4 @@
-// Currently held keys, by lowercase `KeyboardEvent.key` (e.g. "w", "arrowup").
+// Currently held keys, by lowercase `KeyboardEvent.key` (e.g. "arrowup", "e").
 export const keys = {};
 
 // Analog stick from the on-screen joystick: x is steer (right +), y is travel (forward +), each -1..1.
@@ -13,8 +13,8 @@ export function onKey(key, fn) {
 
 // Combined keyboard + joystick intent: forward (+1 ahead, -1 back) and turn (+1 right, -1 left).
 export function moveIntent() {
-  const forward = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0) + stick.y;
-  const turn = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0) + stick.x;
+  const forward = (keys.arrowup ? 1 : 0) - (keys.arrowdown ? 1 : 0) + stick.y;
+  const turn = (keys.arrowright ? 1 : 0) - (keys.arrowleft ? 1 : 0) + stick.x;
   return { forward: Math.max(-1, Math.min(1, forward)), turn: Math.max(-1, Math.min(1, turn)) };
 }
 

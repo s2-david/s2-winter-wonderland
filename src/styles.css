@@ -5,9 +5,21 @@ canvas { display: block; }
 #hud { position: fixed; inset: 0; pointer-events: none; }
 .brand { position: absolute; top: 24px; left: 26px; text-shadow: 0 2px 15px #071126; }
 h1 { margin: 0; font-size: clamp(1.4rem, 3vw, 2.25rem); letter-spacing: -.04em; }
-.card { position: absolute; left: 26px; bottom: 25px; max-width: 370px; padding: 15px 17px; border: 1px solid rgba(224,245,255,.28); border-radius: 16px; background: rgba(12,25,54,.72); backdrop-filter: blur(10px); box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+.card { position: absolute; left: 26px; bottom: 25px; padding: 15px 17px; border: 1px solid rgba(224,245,255,.28); border-radius: 16px; background: rgba(12,25,54,.72); backdrop-filter: blur(10px); box-shadow: 0 10px 40px rgba(0,0,0,.2); }
 .card strong { color: #fff2b4; }
 .card p { margin: 4px 0 0; color: #d9e9f7; font-size: .87rem; line-height: 1.45; }
+
+/* Keyboard hints: arrow keys in keyboard formation, E for actions, scroll to zoom. */
+.hints { display: flex; align-items: center; gap: 22px; color: #d9e9f7; font-size: .87rem; font-weight: 700; }
+.hint { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+kbd { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 6px; border: 1px solid rgba(224,245,255,.4); border-bottom-width: 3px; border-radius: 6px; background: rgba(255,255,255,.08); color: #fff; font: inherit; font-size: .85rem; line-height: 1; }
+.arrow-keys { display: grid; grid-template-columns: repeat(3, 26px); gap: 4px; }
+.arrow-keys kbd { grid-row: 2; }
+.arrow-keys .up { grid-row: 1; grid-column: 2; }
+/* Touch hints: three icons with a short label under each. */
+.touch-hints { display: grid; grid-template-columns: repeat(3, auto); gap: 18px; color: #d9e9f7; font-size: .8rem; font-weight: 700; }
+.touch-hint { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; white-space: nowrap; }
+.hint-icon { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 button { pointer-events: auto; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 10px 15px; background: rgba(13,32,68,.75); color: white; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 6px 24px #09142d55; }
 button:hover, button:focus-visible { background: #284f89; outline: 3px solid #a7dcff; outline-offset: 2px; }
@@ -31,6 +43,7 @@ canvas { touch-action: none; }
 button { touch-action: manipulation; }
 .touch-only, #joystick, #bellButton { display: none; }
 body.touch .touch-only { display: block; }
+body.touch .touch-hints { display: grid; }
 body.touch .keys-only, body.touch #prompt { display: none; }
 body.touch .card { top: calc(72px + env(safe-area-inset-top)); bottom: auto; max-width: 300px; transition: opacity .6s; }
 body.touch.moved .card { opacity: 0; }
@@ -46,17 +59,20 @@ body.touch #bellButton { display: block; position: absolute; right: calc(28px + 
 body.touch #bellButton.show { opacity: .8; transform: scale(1); pointer-events: auto; }
 
 /* Debug-only tuning panel (?debug) */
-#tuner { position: absolute; top: 78px; right: 26px; width: 270px; padding: 14px 15px; border: 1px solid rgba(224,245,255,.28); border-radius: 16px; background: rgba(12,25,54,.88); backdrop-filter: blur(12px); box-shadow: 0 12px 42px rgba(0,0,0,.28); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: .2s; }
+#tuner { position: absolute; z-index: 2; top: 78px; right: 26px; width: 270px; padding: 14px 15px; border: 1px solid rgba(224,245,255,.28); border-radius: 16px; background: rgba(12,25,54,.88); backdrop-filter: blur(12px); box-shadow: 0 12px 42px rgba(0,0,0,.28); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: .2s; }
 #tuner.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
 #tuner h2 { margin: 0 0 3px; font-size: 1rem; color: #fff2b4; }
 #tuner p { margin: 0 0 11px; color: #b9d7ec; font-size: .74rem; line-height: 1.35; }
-.tune-row { display: grid; grid-template-columns: 92px 1fr 34px; align-items: center; gap: 7px; margin: 8px 0; color: #e9f6ff; font-size: .78rem; font-weight: 700; }
+.tune-row { display: grid; grid-template-columns: 92px 1fr 40px; align-items: center; gap: 7px; margin: 8px 0; color: #e9f6ff; font-size: .78rem; font-weight: 700; }
 .tune-row input { width: 100%; }
 .tune-value { color: #bde9ff; font-variant-numeric: tabular-nums; text-align: right; }
+.tune-copy { width: 100%; margin-top: 8px; padding: 8px 12px; font-size: .8rem; }
 
 @media (max-width: 600px) {
   .brand { top: 16px; left: 16px; }
-  #settings { top: 16px; right: 16px; gap: 8px; }
+  #settings { top: 16px; right: 16px; gap: 6px; }
+  .icon-button { width: 40px; height: 40px; }
+  h1 { font-size: 1.3rem; }
   #tuner { top: 70px; right: 16px; }
   body.touch .card { left: 16px; }
   #toast { top: auto; bottom: calc(190px + env(safe-area-inset-bottom)); white-space: nowrap; }

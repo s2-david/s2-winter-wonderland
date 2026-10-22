@@ -43,7 +43,7 @@ src/
 
 ## Controls
 
-- **WASD / arrow keys**: walk; the globe turns beneath the explorer.
+- **Arrow keys**: walk; the globe turns beneath the explorer.
 - **Mouse wheel**: zoom between close exploration and the full planet.
 - **Z** or **View planet**: toggle a wide planet view.
 - **E**: ring the bell when its interaction prompt is visible.

@@ -1,29 +1,36 @@
 import { tuning } from '../config.js';
 
-// Temporary creative controls, only built when the page is opened with ?debug.
+// Creative tuning controls. Shown to everyone while SHOW_TUNER is on in config.js, otherwise only with ?debug.
 const controls = [
   { key: 'walkSpeed', label: 'Walk speed', min: 0.2, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
   { key: 'turnSpeed', label: 'Turn speed', min: 0.2, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
+  { key: 'heroScale', label: 'Hero size', min: 0.2, max: 1.2, step: 0.01, format: v => `${v.toFixed(2)}×` },
   { key: 'heroHeight', label: 'Hero height', min: 0, max: 0.6, step: 0.01, format: v => v.toFixed(2) },
   { key: 'snowDensity', label: 'Snow density', min: 0, max: 100, step: 1, format: v => `${v}%` },
-  { key: 'snowSize', label: 'Snow size', min: 0.03, max: 0.24, step: 0.005, format: v => v.toFixed(2) },
+  { key: 'snowSize', label: 'Snow size', min: 0.03, max: 0.24, step: 0.005, format: v => v.toFixed(3) },
   { key: 'snowSpeed', label: 'Snow speed', min: 0.2, max: 3.5, step: 0.05, format: v => v.toFixed(2) },
 ];
+
+// Lucide "sliders-horizontal" icon (ISC license, lucide.dev)
+const SLIDERS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H3" /><path d="M12 19H3" /><path d="M14 3v4" /><path d="M16 17v4" /><path d="M21 12h-9" /><path d="M21 19h-5" /><path d="M21 5h-7" /><path d="M8 10v4" /><path d="M8 12H3" /></svg>';
 
 export function mountTuner(onChange) {
   const settings = document.querySelector('#settings');
   const tune = document.createElement('button');
   tune.id = 'tune';
+  tune.className = 'icon-button';
   tune.type = 'button';
+  tune.title = 'Tune scene';
+  tune.setAttribute('aria-label', 'Tune scene');
   tune.setAttribute('aria-expanded', 'false');
   tune.setAttribute('aria-controls', 'tuner');
-  tune.textContent = '☷ Tune scene';
+  tune.innerHTML = SLIDERS_ICON;
   settings.prepend(tune);
 
   const tuner = document.createElement('aside');
   tuner.id = 'tuner';
-  tuner.setAttribute('aria-label', 'Prototype scene tuning');
-  tuner.innerHTML = '<h2>Prototype tuning</h2><p>Debug-only creative controls (?debug). Not shown to visitors.</p>';
+  tuner.setAttribute('aria-label', 'Scene tuning');
+  tuner.innerHTML = '<h2>Scene tuning</h2><p>Adjust, then copy the values to make them the new defaults.</p>';
 
   for (const { key, label, min, max, step, format } of controls) {
     const row = document.createElement('label');
@@ -39,6 +46,23 @@ export function mountTuner(onChange) {
     });
     tuner.append(row);
   }
+
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'tune-copy';
+  copy.textContent = 'Copy values';
+  copy.addEventListener('click', async () => {
+    const text = JSON.stringify(tuning, null, 2);
+    console.log('Scene tuning values:', text);
+    try {
+      await navigator.clipboard.writeText(text);
+      copy.textContent = 'Copied ✓';
+    } catch {
+      copy.textContent = 'Copy failed: values are in the console';
+    }
+    setTimeout(() => { copy.textContent = 'Copy values'; }, 2000);
+  });
+  tuner.append(copy);
   settings.after(tuner);
 
   tune.addEventListener('click', () => {

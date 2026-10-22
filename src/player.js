@@ -39,6 +39,7 @@ scarf.position.set(0, 0.62, 0.19);
 avatar.add(scarf);
 
 export function applyHeroTuning() {
+  avatar.scale.setScalar(tuning.heroScale);
   hero.position.z = R + tuning.heroHeight;
 }
 
