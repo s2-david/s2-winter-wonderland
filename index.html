@@ -2,19 +2,57 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#101b3a" />
     <title>Winter Wonderland Planet</title>
   </head>
   <body>
     <div id="hud">
-      <div class="brand"><h1>Winter Wonderland</h1><div class="sub">A tiny globe to wander</div></div>
+      <div class="brand"><h1>Winter Wonderland</h1></div>
       <div id="settings">
-        <button id="mute" type="button" aria-pressed="false" aria-label="Mute sound">♪ Sound on</button>
-        <button id="view" type="button" aria-label="Toggle full planet view">◌ View planet <span aria-hidden="true">Z</span></button>
+        <button id="mute" class="icon-button" type="button" aria-pressed="false" aria-label="Mute sound" title="Mute sound">
+          <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" /></svg>
+          <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" /></svg>
+        </button>
+        <button id="view" class="icon-button" type="button" aria-label="Zoom between close-up and full planet view" title="Zoom (Z)">
+          <!-- Lucide "fullscreen" icon (ISC license, lucide.dev) -->
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><rect width="10" height="8" x="7" y="8" rx="1" /></svg>
+        </button>
       </div>
-      <div class="card"><strong>Explore</strong><p>The explorer always faces forward. Use <b>A / D</b> or <b>← / →</b> to steer the planet beneath them, then hold <b>W</b> or <b>↑</b> to travel straight ahead (or <b>S / ↓</b> to back up). They gently slide around obstacles. Scroll to zoom; find the bell and press <b>E</b>.</p></div>
+      <div class="card">
+        <div class="hints keys-only">
+          <div class="arrow-keys" role="img" aria-label="Arrow keys to walk and steer">
+            <kbd class="up">↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>
+          </div>
+          <div class="hint">Press <kbd>E</kbd> for actions</div>
+          <div class="hint">
+            <!-- Lucide "mouse" icon (ISC license, lucide.dev) -->
+            <svg class="hint-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="7" /><path d="M12 6v4" /></svg>
+            Scroll to zoom
+          </div>
+        </div>
+        <!-- Lucide "joystick", "move-diagonal" and "bell" icons (ISC license, lucide.dev) -->
+        <div class="touch-hints touch-only">
+          <div class="touch-hint">
+            <svg class="hint-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 17a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2Z" /><path d="M6 15v-2" /><path d="M12 15V9" /><circle cx="12" cy="6" r="3" /></svg>
+            Drag to walk
+          </div>
+          <div class="touch-hint">
+            <svg class="hint-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 19H5v-6" /><path d="M13 5h6v6" /><path d="M19 5 5 19" /></svg>
+            Pinch to zoom
+          </div>
+          <div class="touch-hint">
+            <svg class="hint-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /></svg>
+            Tap for actions
+          </div>
+        </div>
+      </div>
       <div id="prompt" role="status">Press <b>E</b> to ring the village bell</div>
+      <div id="joystick" aria-hidden="true">
+        <svg class="arrows" viewBox="0 0 128 128"><path d="M56 22l8-9 8 9M56 106l8 9 8-9M22 56l-9 8 9 8M106 56l9 8-9 8" /></svg>
+        <div class="knob"></div>
+      </div>
+      <button id="bellButton" type="button" disabled>🔔 Ring bell</button>
       <div id="toast" role="status" aria-live="polite">✦ The village sparkles!</div>
     </div>
     <script type="module" src="/src/main.js"></script>

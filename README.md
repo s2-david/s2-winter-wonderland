@@ -23,9 +23,9 @@ src/
   main.js             wires modules together and runs the frame loop
   config.js           planet radius, zoom limits, bell range, tuning defaults
   stage.js            scene, camera, renderer, lights, resize
-  input.js            keyboard state and one-shot key actions
+  input.js            keyboard + joystick movement intent, one-shot key actions
   player.js           explorer model, steering, walking, collision
-  cameraRig.js        zoom and third-person / planet-view framing
+  cameraRig.js        zoom (wheel, pinch) and third-person / planet-view framing
   snow.js             falling snow particles
   audio.js            synthesized bell jingle (Web Audio)
   world/
@@ -33,18 +33,25 @@ src/
     props.js          tree, house and path-stone builders
     village.js        where everything is placed
     bell.js           bell landmark and its swing
-  ui/hud.js           sound/view buttons, bell prompt, toast
+  ui/hud.js           sound/view buttons, bell prompt and button, toast
+  ui/touch.js         touch detection and the on-screen joystick
   debug/tuner.js      ?debug tuning panel (loaded only when requested)
   styles.css
 ```
 
-`dist/` is build output. Don't edit it by hand; run `npm run build`.
+`dist/` is build output and isn't committed. Vercel runs `npm run build` on every push and deploys the result; `main` goes to production, other branches get preview links.
 
 ## Controls
 
-- **WASD / arrow keys**: walk; the globe turns beneath the explorer.
+- **Arrow keys**: walk; the globe turns beneath the explorer.
 - **Mouse wheel**: zoom between close exploration and the full planet.
 - **Z** or **View planet**: toggle a wide planet view.
 - **E**: ring the bell when its interaction prompt is visible.
+
+On phones and tablets (or as soon as the screen is touched):
+
+- **Joystick** (bottom left): push up to walk, down to back up, sideways to steer. Speed follows how far it's pushed.
+- **Pinch**: zoom in and out.
+- **Ring bell**: appears when the explorer is near the bell.
 
 No art, sound, or paid assets are required. The little jingle is synthesized in-browser through the Web Audio API after a user interaction.
