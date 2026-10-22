@@ -1,0 +1,39 @@
+# Decisions
+
+Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
+
+## 2026-10-22: Shared context lives in the repo
+
+`CLAUDE.md`, `docs/` and `.claude/` are committed so every teammate's Claude session starts from the same project knowledge. Personal preferences go in `CLAUDE.local.md` (git-ignored). Each story gets its own branch, PR and Claude session.
+
+## 2026-10-22: Vercel builds from source; `dist/` is not committed
+
+Vercel runs `npm run build` on every push. `main` deploys to production; other branches get preview links. Committing build output caused noise in every commit and would not scale to large 3D assets.
+
+## 2026-10-22: Tuning panel visible to everyone (temporary)
+
+While the scene is being tuned, `SHOW_TUNER` in `src/config.js` is `true`, so the panel shows on the live site. Set it to `false` once tuning settles; the panel will then only appear with `?debug`.
+
+## 2026-10-22: Arrow keys only on desktop
+
+Arrow keys walk and steer, E is the action key, scroll zooms, Z toggles zoom. WASD was removed to keep the controls and instructions simple.
+
+## 2026-10-22: Icon-only controls and instruction cards
+
+Sound, Zoom and Tune are round icon buttons. Instruction cards use icons and a few words: arrow keys / "Press E for actions" / "Scroll to zoom" on desktop; "Drag to walk" / "Pinch to zoom" / "Tap for actions" on phones.
+
+## 2026-10-22: Lucide for icons
+
+Icons come from Lucide (ISC license), pasted as inline SVG with a credit comment. Keeps the icon style consistent.
+
+## 2026-10-22: Mobile controls
+
+On touch devices: an on-screen joystick (chosen over tap-to-walk because it matches the keyboard controls), a contextual action button that appears near interactive objects, and pinch to zoom.
+
+## 2026-10-22: Vite + vanilla Three.js
+
+The prototype was restructured into a Vite project with small modules. Three.js is an npm dependency pinned at `0.161.0`. No UI framework for now.
+
+## Planned: art direction and scaling approach
+
+Move toward a smooth, detailed stylized diorama look using baked lighting and authored glTF models, with villages loaded by distance. See `docs/roadmap.md`.

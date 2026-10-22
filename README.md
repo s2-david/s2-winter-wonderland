@@ -4,7 +4,7 @@ A Three.js experience: a tiny snowy planet, a walkable fixed character viewpoint
 
 ## Develop
 
-Requires Node 20+.
+Requires Node 20.19+. Team workflow, conventions and the performance budget are in [CLAUDE.md](CLAUDE.md); plans and past decisions are in [docs/](docs/).
 
 ```sh
 npm install
@@ -13,7 +13,7 @@ npm run build     # production build into dist/
 npm run preview   # serve the production build locally
 ```
 
-Add `?debug` to the URL (e.g. `http://localhost:5173/?debug`) to show the **Tune scene** panel for adjusting walk/turn speed, hero height and snow. It is not shown to visitors. Shipping defaults live in `tuning` in `src/config.js`.
+The **Tune scene** panel (sliders icon, top right) adjusts walk/turn speed, hero size and height, and snow. While `SHOW_TUNER` is `true` in `src/config.js` it shows for everyone; set it to `false` to show it only with `?debug`. Shipping defaults live in `tuning` in `src/config.js`; the panel's **Copy values** button gives JSON to paste there.
 
 ## Project layout
 
