@@ -1,6 +1,6 @@
 import './styles.css';
 import { BELL_RANGE, SHOW_TUNER } from './config.js';
-import { scene, camera, renderer } from './stage.js';
+import { scene, camera, renderer, applyLightTuning } from './stage.js';
 import { world } from './world/planet.js';
 import { buildVillage } from './world/village.js';
 import { placeBell, swingBell, updateBell, distanceToBell } from './world/bell.js';
@@ -25,6 +25,7 @@ function applyTuning() {
   applySnowTuning();
   applyHeroTuning();
   applyGrainTuning();
+  applyLightTuning();
 }
 applyTuning();
 

@@ -59,14 +59,17 @@ body.touch #bellButton { display: block; position: absolute; right: calc(28px + 
 body.touch #bellButton.show { opacity: .8; transform: scale(1); pointer-events: auto; }
 
 /* Debug-only tuning panel (?debug) */
-#tuner { position: absolute; z-index: 2; top: 78px; right: 26px; width: 270px; padding: 14px 15px; border: 1px solid rgba(224,245,255,.28); border-radius: 16px; background: rgba(12,25,54,.88); backdrop-filter: blur(12px); box-shadow: 0 12px 42px rgba(0,0,0,.28); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: .2s; }
+#tuner { position: absolute; z-index: 2; top: 78px; right: 26px; width: 270px; padding: 14px 15px; border: 1px solid rgba(224,245,255,.28); border-radius: 16px; background: rgba(12,25,54,.88); backdrop-filter: blur(12px); box-shadow: 0 12px 42px rgba(0,0,0,.28); max-height: calc(100vh - 110px); overflow-y: auto; overscroll-behavior: contain; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: .2s; }
 #tuner.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
 #tuner h2 { margin: 0 0 3px; font-size: 1rem; color: #fff2b4; }
 #tuner p { margin: 0 0 11px; color: #b9d7ec; font-size: .74rem; line-height: 1.35; }
+#tuner h3 { margin: 14px 0 2px; color: #fff2b4; font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; }
 .tune-row { display: grid; grid-template-columns: 92px 1fr 40px; align-items: center; gap: 7px; margin: 8px 0; color: #e9f6ff; font-size: .78rem; font-weight: 700; }
 .tune-row input { width: 100%; }
 .tune-value { color: #bde9ff; font-variant-numeric: tabular-nums; text-align: right; }
 .tune-copy { width: 100%; margin-top: 8px; padding: 8px 12px; font-size: .8rem; }
+.tune-looks { display: flex; gap: 6px; }
+.tune-looks button { flex: 1; padding: 7px 6px; font-size: .74rem; }
 
 @media (max-width: 600px) {
   .brand { top: 16px; left: 16px; }

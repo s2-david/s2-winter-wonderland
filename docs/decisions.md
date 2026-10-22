@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-22: "Paper studio" look as the default (being evaluated)
+
+Moving toward a refined papercraft reference: fine, even grain that catches the light (no blotches), one soft warm key light with blurred shadows, a lower warm sky fill, and AgX tone mapping so highlights roll off softly. Grain and lighting are all tuning values, and the tuning panel has one-click looks (Before, Kraft, Paper studio) so the style can be compared and changed without code. Live ambient occlusion was left out because it's too costly on phones; bake it into models instead.
+
 ## 2026-10-22: Paper grain across the whole scene
 
 To move toward a handmade paper-model look, every lit surface gets a procedural kraft-paper grain (blotchy tone, fine fibres) in its shader instead of baked textures. One shader patch keeps the scene consistent, adds no downloads or draw calls, and is pinned to the planet so it doesn't swim as the planet turns. Fine detail fades out with distance to avoid shimmer. The strength is a tuning slider (default 1.5, 0 turns it off) while the look is being decided. The Blender house was simplified to match: thin crisp roof snow, no icicles or snow lumps.

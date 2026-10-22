@@ -21,5 +21,21 @@ export const tuning = {
   snowDensity: 100,
   snowSize: 0.075,
   snowSpeed: 0.2,
-  grain: 1.5, // kraft-paper grain on surfaces; 0 turns it off
+  // Paper grain on surfaces (src/grain.js). Strength 0 turns it off.
+  // The defaults are the "Paper studio" look; the tuning panel can switch back to "Before".
+  grain: 1,
+  grainBlotch: 0, // large soft patches of tone
+  grainSize: 0.6, // bigger is coarser fibres and grit
+  grainFibre: 0.6,
+  grainRelief: 1.2, // how much the grain catches the light
+  // Lighting (src/stage.js).
+  sunStrength: 3.4,
+  sunHeight: 36, // degrees above the horizon, seen from the explorer
+  sunAngle: -55, // degrees around the horizon; 0 is straight ahead
+  shadowSoftness: 4,
+  skyFill: 1.2,
+  skyWarmth: 0.45, // 0 is the cool night sky, 1 a warm studio fill
+  moonStrength: 0.4,
+  exposure: 1.15,
+  toneMapping: 2, // 0 none, 1 ACES, 2 AgX
 };
