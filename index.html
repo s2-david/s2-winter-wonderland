@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101b3a" />
+    <title>Winter Wonderland Planet</title>
+  </head>
+  <body>
+    <div id="hud">
+      <div class="brand"><h1>Winter Wonderland</h1><div class="sub">A tiny globe to wander</div></div>
+      <div id="settings">
+        <button id="mute" type="button" aria-pressed="false" aria-label="Mute sound">♪ Sound on</button>
+        <button id="view" type="button" aria-label="Toggle full planet view">◌ View planet <span aria-hidden="true">Z</span></button>
+      </div>
+      <div class="card"><strong>Explore</strong><p>The explorer always faces forward. Use <b>A / D</b> or <b>← / →</b> to steer the planet beneath them, then hold <b>W</b> or <b>↑</b> to travel straight ahead (or <b>S / ↓</b> to back up). They gently slide around obstacles. Scroll to zoom; find the bell and press <b>E</b>.</p></div>
+      <div id="prompt" role="status">Press <b>E</b> to ring the village bell</div>
+      <div id="toast" role="status" aria-live="polite">✦ The village sparkles!</div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
