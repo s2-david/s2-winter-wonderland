@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-22: Blender models are scripted and baked for the web
+
+The first authored model (the red Scandinavian house) is built by a Python script in `art/blender/` rather than by hand, so changes are reviewable and repeatable. The web export merges the model into one mesh, bakes procedural colour and ambient occlusion into one texture, and keeps windows as emissive materials: 3 draw calls and no lights. Sun shadows are not baked because the planet rotates under a fixed sun. Glow on the snow is faked with an additive decal instead of a point light. Mesh compression (Draco or meshopt) is not set up yet.
+
 ## 2026-10-22: Shared context lives in the repo
 
 `CLAUDE.md`, `docs/` and `.claude/` are committed so every teammate's Claude session starts from the same project knowledge. Personal preferences go in `CLAUDE.local.md` (git-ignored). Each story gets its own branch, PR and Claude session.

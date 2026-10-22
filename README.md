@@ -32,11 +32,14 @@ src/
     planet.js         planet mesh, surface placement, collision blockers
     props.js          tree, house and path-stone builders
     village.js        where everything is placed
+    blenderHouse.js   loads and places the Blender-made house
+    models/           GLB models exported from art/blender/
     bell.js           bell landmark and its swing
   ui/hud.js           sound/view buttons, bell prompt and button, toast
   ui/touch.js         touch detection and the on-screen joystick
   debug/tuner.js      ?debug tuning panel (loaded only when requested)
   styles.css
+art/blender/          scripts that build, render and export Blender models (see its README)
 ```
 
 `dist/` is build output and isn't committed. Vercel runs `npm run build` on every push and deploys the result; `main` goes to production, other branches get preview links.

@@ -32,8 +32,8 @@ The explorer always stands at the top of the planet, so most of the planet is be
    - [ ] Shared interaction system (move the bell onto it)
    - [ ] Per-village collision
 2. **Prove the look**
-   - [ ] One detailed asset (a house or rock formation) made in Blender with baked lighting
-   - [ ] Asset pipeline: export glTF, compress, load in the scene
+   - [x] One detailed asset (a house or rock formation) made in Blender with baked lighting (the red house, baked colour + AO)
+   - [ ] Asset pipeline: export glTF, compress, load in the scene (export and load done; compression still to do)
    - [ ] Test on a mid-range phone against the performance budget
 3. **Lighting and effects**
    - [ ] Environment lighting, glow effect, fog, tone mapping
