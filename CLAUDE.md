@@ -39,6 +39,7 @@ Vanilla Three.js (pinned to `0.161.0`) bundled with Vite. No UI framework. See t
 - Input: keyboard and the on-screen joystick both feed `moveIntent()` in `src/input.js`. Arrow keys move; E is the action key; Z toggles zoom. WASD is intentionally not supported.
 - Tunable values live in `tuning` in `src/config.js`. The tuning panel (`src/debug/tuner.js`) shows for everyone while `SHOW_TUNER` is `true`; otherwise only with `?debug`. Its "Copy values" button produces JSON to paste back into `tuning` as new defaults.
 - Touch UI: `body.touch` is set on touch devices (`src/ui/touch.js`). Use `.touch-only` / `.keys-only` for content that differs between phone and desktop.
+- Every lit `MeshStandardMaterial` gets a kraft-paper grain from `src/grain.js` (strength is `tuning.grain`). `main.js` adds it to everything under `world` at startup; anything added later (for example a loaded GLB) must call `addGrain()` on itself. Emissive materials are skipped.
 - Authored models are built in Blender from scripts in `art/blender/` and exported as GLB into `src/world/models/`, with colour and ambient occlusion baked into one texture and glow kept as emissive materials (no lights). Import them with `?url` so Vite hashes them. See `art/blender/README.md`.
 - The planned structure for multiple villages (each village as its own lazily loaded module, loaded by distance) is in `docs/roadmap.md`.
 

@@ -22,8 +22,9 @@ This keeps only the red house and turns it into something cheap to draw in the b
 
 - All parts are merged into one mesh with bevels applied. Smoke puffs and lights are dropped.
 - The procedural materials (board siding, stone, snow, wreath) and ambient occlusion are baked by Cycles into one 1024² texture (`--bake-size` to change), so the body is a single draw call.
+- No paper texture is baked in: the planet-wide grain shader (`src/grain.js`) adds it at runtime, so the house matches everything else.
 - Windows, curtains and the lantern stay separate as two emissive materials. Their glow comes from emissive colour, not from lights.
 
-The result is about 7,400 triangles and 3 draw calls in a ~740 kB GLB. `src/world/blenderHouse.js` loads and places it.
+The result is about 5,900 triangles and 3 draw calls in a ~550 kB GLB. `src/world/blenderHouse.js` loads and places it.
 
 Baked occlusion is fine because the planet rotates under a fixed sun: directional shadows still come from the live sun. Don't bake the sun into the texture.

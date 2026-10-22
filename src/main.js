@@ -8,6 +8,7 @@ import { hero, applyHeroTuning, updatePlayer } from './player.js';
 import { toggleView, updateCamera } from './cameraRig.js';
 import { snow, applySnowTuning, updateSnow } from './snow.js';
 import { jingle } from './audio.js';
+import { addGrain, applyGrainTuning, updateGrain } from './grain.js';
 import { onKey } from './input.js';
 import { showBellPrompt, showToast, onBellButton } from './ui/hud.js';
 import './ui/touch.js';
@@ -17,10 +18,13 @@ buildVillage();
 placeBell();
 scene.add(hero);
 scene.add(snow);
+addGrain(world);
+addGrain(hero, { onPlanet: false });
 
 function applyTuning() {
   applySnowTuning();
   applyHeroTuning();
+  applyGrainTuning();
 }
 applyTuning();
 
@@ -50,6 +54,7 @@ function loop(t) {
   updateCamera();
   updateSnow(dt);
   updateBell(dt);
+  updateGrain();
   showBellPrompt(bellIsNear());
   renderer.render(scene, camera);
 }

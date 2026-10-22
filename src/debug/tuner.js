@@ -9,6 +9,7 @@ const controls = [
   { key: 'snowDensity', label: 'Snow density', min: 0, max: 100, step: 1, format: v => `${v}%` },
   { key: 'snowSize', label: 'Snow size', min: 0.03, max: 0.24, step: 0.005, format: v => v.toFixed(3) },
   { key: 'snowSpeed', label: 'Snow speed', min: 0.2, max: 3.5, step: 0.05, format: v => v.toFixed(2) },
+  { key: 'grain', label: 'Paper grain', min: 0, max: 2.5, step: 0.05, format: v => `${v.toFixed(2)}×` },
 ];
 
 // Lucide "sliders-horizontal" icon (ISC license, lucide.dev)

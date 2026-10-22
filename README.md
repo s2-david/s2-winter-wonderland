@@ -13,7 +13,7 @@ npm run build     # production build into dist/
 npm run preview   # serve the production build locally
 ```
 
-The **Tune scene** panel (sliders icon, top right) adjusts walk/turn speed, hero size and height, and snow. While `SHOW_TUNER` is `true` in `src/config.js` it shows for everyone; set it to `false` to show it only with `?debug`. Shipping defaults live in `tuning` in `src/config.js`; the panel's **Copy values** button gives JSON to paste there.
+The **Tune scene** panel (sliders icon, top right) adjusts walk/turn speed, hero size and height, snow, and the paper grain. While `SHOW_TUNER` is `true` in `src/config.js` it shows for everyone; set it to `false` to show it only with `?debug`. Shipping defaults live in `tuning` in `src/config.js`; the panel's **Copy values** button gives JSON to paste there.
 
 ## Project layout
 
@@ -28,6 +28,7 @@ src/
   cameraRig.js        zoom (wheel, pinch) and third-person / planet-view framing
   snow.js             falling snow particles
   audio.js            synthesized bell jingle (Web Audio)
+  grain.js            kraft-paper grain shader added to every lit surface
   world/
     planet.js         planet mesh, surface placement, collision blockers
     props.js          tree, house and path-stone builders

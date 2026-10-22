@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { R } from '../config.js';
 import { placeBlocked } from './planet.js';
+import { addGrain } from '../grain.js';
 import houseUrl from './models/house.glb?url';
 
 // The Scandinavian house modelled in Blender; how to re-export it is in art/blender/README.md.
@@ -54,6 +55,7 @@ export function placeBlenderHouse(lat, lon) {
       o.receiveShadow = !glow;
       o.material.flatShading = true;
     });
+    addGrain(model);
     facing.add(model);
   });
   return house;

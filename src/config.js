@@ -21,4 +21,5 @@ export const tuning = {
   snowDensity: 100,
   snowSize: 0.075,
   snowSpeed: 0.2,
+  grain: 1.5, // kraft-paper grain on surfaces; 0 turns it off
 };

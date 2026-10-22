@@ -193,7 +193,6 @@ M = dict(
     clay=mat("Clay", (0.80, 0.81, 0.83), rough=0.9),
     bed=noisy_mat("PondBed", (0.04, 0.16, 0.22), (0.08, 0.26, 0.32), scale=3, bump=0),
     ice=ice_mat(),
-    icicle=mat("Icicle", (0.75, 0.90, 0.97), rough=0.05, trans=0.7, ior=1.31),
     falu=wood_mat("FaluRed", (0.42, 0.055, 0.035)),
     ochre=wood_mat("Ochre", (0.72, 0.45, 0.12)),
     trim=mat("Trim", (0.88, 0.87, 0.83), rough=0.55),
@@ -360,40 +359,22 @@ def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None
             box("Corner", (sx * W / 2, sy * D / 2, base + Hw / 2), (0.1, 0.1, Hw), M["trim"], root, bev=0.01)
 
     a = math.atan2(rise, W / 2)
-    over, gover, tR, tS = 0.3, 0.22, 0.07, 0.2
+    over, gover, tR, tS = 0.28, 0.2, 0.06, 0.07
     L = math.hypot(W / 2, rise) + over
     Ly = D + 2 * gover
     rp = Vector((0, ridge))
+    # Simple paper-model roof: a thin dark board with an even, crisp layer of snow on top. Each layer
+    # runs past the ridge just far enough for the two sides to meet in a clean peak.
     for s in (1, -1):
         dv = Vector((s * math.cos(a), -math.sin(a)))
         nv = Vector((s * math.sin(a), math.cos(a)))
-        c = rp + dv * (L / 2 - 0.03) + nv * (tR / 2)
-        box("Roof", (c.x, 0, c.y), (L + 0.06, Ly, tR), M["roof"], root, rot=(0, s * a, 0), bev=0.01)
-        c = rp + dv * (L / 2 + 0.03) + nv * (tR + tS / 2 - 0.03)
-        box("RoofSnow", (c.x, 0, c.y), (L + 0.1, Ly + 0.08, tS), M["snow_roof"], root,
-            rot=(0, s * a, 0), bev=0.08, segs=3, jit=0.012)
-        for sy in (1, -1):
-            c = rp + dv * (L / 2) + nv * (tR / 2 - 0.035)
-            box("Fascia", (c.x, sy * (Ly / 2 + 0.02), c.y), (L + 0.04, 0.045, 0.13), M["trim"], root,
-                rot=(0, s * a, 0), bev=0.006)
-        # icicles under the eave
-        e = rp + dv * (L - 0.02) + nv * 0.0
-        y = -Ly / 2 + 0.1
-        while y < Ly / 2 - 0.05:
-            ln = random.uniform(0.06, 0.32)
-            cone("Icicle", (e.x, y, e.y - ln / 2 - 0.01), 0.0, random.uniform(0.018, 0.035), ln,
-                 M["icicle"], segs=5, parent=root)
-            y += random.uniform(0.09, 0.2)
-        # snow lip drooping over the eave
-        for k in range(6):
-            yy = lerp(-Ly / 2 + 0.2, Ly / 2 - 0.2, k / 5) + random.uniform(-.1, .1)
-            p = rp + dv * (L + 0.02) + nv * 0.12
-            blob("Lip", (p.x, yy, p.y), (0.13, 0.28, 0.1), M["snow_roof"], jit=0.15, parent=root, rz=0)
-    # ridge cap
-    cap_z = ridge + (tR + tS - 0.04) / math.cos(a) - 0.1 * min(1.0, W / 2.0) - 0.03
-    cr = 0.17 * min(1.0, W / 2.0)
-    cone("RidgeSnow", (0, 0, cap_z), cr, cr, Ly + 0.06, M["snow_roof"], segs=6, parent=root,
-         rot=(math.pi / 2, 0, 0), jit=0.012)
+        t0, t1 = -tR * math.tan(a), L
+        c = rp + dv * ((t0 + t1) / 2) + nv * (tR / 2)
+        box("Roof", (c.x, 0, c.y), (t1 - t0, Ly, tR), M["roof"], root, rot=(0, s * a, 0), bev=0.006, segs=1)
+        t0, t1 = -(tR + tS) * math.tan(a), L - 0.04  # inset at the eave so the dark edge shows
+        c = rp + dv * ((t0 + t1) / 2) + nv * (tR + tS / 2)
+        box("RoofSnow", (c.x, 0, c.y), (t1 - t0, Ly - 0.05, tS), M["snow_roof"], root,
+            rot=(0, s * a, 0), bev=0.012, segs=1)
 
     for face, u, z, w, h, kw in windows:
         dist = D / 2 if face in ("front", "back") else W / 2
