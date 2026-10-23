@@ -64,8 +64,10 @@ vec3 paperRelief(vec3 n, float faceDirection) {
 
 function patch(material, space) {
   if (!material.isMeshStandardMaterial || material.userData.grain) return;
-  // Glowing windows and lamps stay clean; grain on light sources reads as dirt.
-  if (material.emissiveIntensity > 0 && material.emissive.getHex() !== 0) return;
+  // Glowing windows and lamps stay clean; grain on light sources reads as dirt. A material can opt
+  // back in when its glow is only a soft fill (the snowman's snow), not a light source.
+  const glows = material.emissiveIntensity > 0 && material.emissive.getHex() !== 0;
+  if (glows && !material.userData.grainOverGlow) return;
   material.userData.grain = true;
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, params);

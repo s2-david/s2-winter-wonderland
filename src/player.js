@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { R, tuning } from './config.js';
 import { world, blockers, snowHeight } from './world/planet.js';
 import { moveIntent } from './input.js';
+import { getDaylight } from './stage.js';
 
 // Explorer stays planted while the planet moves underneath; forward is always screen-up.
 export const hero = new THREE.Group();
@@ -34,33 +35,99 @@ function facets(geometry, color, spread = 0.06) {
 }
 
 const card = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 });
-const SNOW = '#fbf9f4', COAL = '#2e2a2b', CHEEK = '#f2a383', CARROT = '#f28a1e', WOOD = '#7a4a2c';
+const COAL ='#2e2a2b', CHEEK = '#f2a383', CARROT = '#f28a1e', WOOD = '#7a4a2c';
 const WOOL = '#d8403a', HAT = '#3a3536', HOLLY = '#4c8a3f';
 
-// A big, fat body (squashed a little so it sits heavy) and a smaller head. Each snowball is its own
-// group so it can sway separately; the face, hat, scarf and arms ride along.
-const BODY = 0.36, SQUASH = 0.92, HEAD = 0.22;
+// A squat, rounded body and a slightly oversized head that sinks into it, so the two snowballs
+// overlap. Each snowball is its own group so it can sway separately; the face, hat, scarf and arms
+// ride along.
+const BODY = 0.36, SQUASH = 0.88, HEAD = 0.24;
+const NECK = 0.27; // height of the bottom of the head above the body's centre
 
 // The body is pressed into the ground like a pear: widest low down, with its base flattened where it
 // sits in the snow. bodyWidth() is how far the sides bulge at a height (as a fraction of the radius),
 // so buttons and the scarf tail can sit on the surface.
 const BASE = -0.66;
 const bodyWidth = (height) => 1 + 0.07 * (1 - height);
-function bodyGeometry() {
-  const geometry = new THREE.IcosahedronGeometry(BODY, 2);
-  const position = geometry.attributes.position, v = new THREE.Vector3();
+
+// Each snowball starts as a geodesic sphere whose corners are nudged a little along the surface, so
+// the facets come out broad and irregular, like hand-cut card, while the outline stays round. Shared
+// corners move together, so the folds never split.
+function snowball(radius, shape = (v) => v) {
+  const geometry = new THREE.IcosahedronGeometry(radius, 1);
+  const position = geometry.attributes.position, v = new THREE.Vector3(), nudge = new THREE.Vector3();
+  const moved = new Map();
   for (let i = 0; i < position.count; i++) {
     v.fromBufferAttribute(position, i);
-    const height = v.y / BODY, bulge = bodyWidth(height);
-    position.setXYZ(i, v.x * bulge, Math.max(height, BASE) * BODY, v.z * bulge);
+    const key = v.toArray().map((n) => n.toFixed(4)).join();
+    if (!moved.has(key)) {
+      nudge.randomDirection().multiplyScalar(radius * 0.07);
+      nudge.addScaledVector(v, -nudge.dot(v) / v.lengthSq()); // keep it along the surface
+      moved.set(key, shape(v.clone().add(nudge).setLength(radius * (0.99 + Math.random() * 0.02))));
+    }
+    const p = moved.get(key);
+    position.setXYZ(i, p.x, p.y, p.z);
   }
   return geometry;
 }
+function bodyShape(v) {
+  const height = v.y / BODY, bulge = bodyWidth(height);
+  return v.set(v.x * bulge, Math.max(height, BASE) * BODY, v.z * bulge);
+}
 
-const snowballs = [[bodyGeometry(), 0.21, SQUASH], [new THREE.IcosahedronGeometry(HEAD, 2), 0.72, 1]].map(([geometry, y, squash]) => {
+// The snow is soft matte card in a studio light. Each facet takes one tone from a small palette of
+// warm white, ivory, cream and very pale cool grey, so the folds show as gentle colour changes rather
+// than light and dark. The palette is a tiny texture, and every facet's UVs point at its tone.
+const SNOW_TONES = ['#fcf9f3', '#f6eedf', '#f1e5cf', '#e9ecee'];
+const PALETTE_SIZE = 16;
+const palette = new Uint8Array(PALETTE_SIZE * 4);
+const tone = new THREE.Color();
+for (let i = 0; i < PALETTE_SIZE; i++) {
+  tone.set(SNOW_TONES[i % SNOW_TONES.length]).offsetHSL(0, 0, (Math.random() - 0.5) * 0.03);
+  const srgb = tone.getStyle(THREE.SRGBColorSpace).match(/\d+/g).map(Number);
+  palette.set([...srgb, 255], i * 4);
+}
+const snowPalette = new THREE.DataTexture(palette, PALETTE_SIZE, 1);
+snowPalette.colorSpace = THREE.SRGBColorSpace;
+snowPalette.magFilter = snowPalette.minFilter = THREE.NearestFilter;
+snowPalette.needsUpdate = true;
+
+// Every facet stays flat, but its normal is tipped toward the sky so the shaded side still reads as
+// white snow. At night a faint glow in the facet's own tone fills the shadows the way studio bounce
+// light would, so no facet drops to grey or picks up the blue of the sky; updatePlayer() fades it out
+// in daylight, where it would wash the facets out to plain white.
+function snowFacets(geometry) {
+  const folded = geometry.index ? geometry.toNonIndexed() : geometry;
+  const position = folded.attributes.position, count = position.count;
+  const uvs = new Float32Array(count * 2), normals = new Float32Array(count * 3);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  const sky = new THREE.Vector3(0, 0.7, 0);
+  for (let i = 0; i < count; i += 3) {
+    a.fromBufferAttribute(position, i);
+    b.fromBufferAttribute(position, i + 1);
+    c.fromBufferAttribute(position, i + 2);
+    const normal = c.sub(b).cross(a.sub(b)).normalize().add(sky).normalize();
+    const u = (Math.floor(Math.random() * PALETTE_SIZE) + 0.5) / PALETTE_SIZE;
+    for (let j = 0; j < 3; j++) {
+      uvs.set([u, 0.5], (i + j) * 2);
+      normal.toArray(normals, (i + j) * 3);
+    }
+  }
+  folded.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  folded.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  return folded;
+}
+const snowCard = new THREE.MeshStandardMaterial({
+  map: snowPalette, emissiveMap: snowPalette, emissive: '#ffffff', emissiveIntensity: 0.5, roughness: 1, metalness: 0,
+});
+const SNOW_GLOW = { night: 0.5, day: 0.05 };
+snowCard.userData.grainOverGlow = true;
+
+const bodyY = BODY * SQUASH * -BASE - 0.005;
+const snowballs = [[snowball(BODY, bodyShape), bodyY, SQUASH], [snowball(HEAD), bodyY + NECK + HEAD, 1]].map(([geometry, y, squash]) => {
   const ball = new THREE.Group();
   ball.position.y = y;
-  const mesh = new THREE.Mesh(facets(geometry, SNOW, 0.05), card);
+  const mesh = new THREE.Mesh(snowFacets(geometry), snowCard);
   mesh.scale.y = squash;
   ball.add(mesh);
   avatar.add(ball);
@@ -135,14 +202,20 @@ for (const [x, y] of [[-0.095, 0.05], [-0.07, 0.045], [-0.083, 0.068]]) {
 }
 face.add(hat);
 
-// Three coal buttons down the front of the body, each turned to lie flat on its curve.
+// Three coal buttons down the front of the body. The facets are broad, so each button is seated on
+// the facet actually in front of it and turned to lie flat against it.
 const buttonGeometry = facets(new THREE.IcosahedronGeometry(0.032, 0), COAL, 0.06);
+// The ray is cast in the body's own space, so the body mesh's squash is its only transform.
+const bodyMesh = body.children[0];
+bodyMesh.updateMatrix();
+bodyMesh.matrixWorld.copy(bodyMesh.matrix);
+const unsquash = new THREE.Vector3(1, 1 / SQUASH, 1);
 for (const y of [0.14, 0.02, -0.1]) {
-  const lift = Math.asin(y / SQUASH / BODY);
+  const hit = new THREE.Raycaster(new THREE.Vector3(0.04, y, 1), new THREE.Vector3(0, 0, -1)).intersectObject(bodyMesh)[0];
   const button = new THREE.Mesh(buttonGeometry, card);
   button.scale.z = 0.45;
-  button.position.set(0.04, y, BODY * Math.cos(lift) * bodyWidth(Math.sin(lift)) - 0.005);
-  button.rotation.set(-lift, 0.1, 0);
+  button.position.copy(hit.point);
+  button.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), hit.face.normal.clone().multiply(unsquash).normalize());
   body.add(button);
 }
 
@@ -256,4 +329,6 @@ export function updatePlayer(dt, t) {
   for (const eye of eyes) eye.scale.y = 1 - 0.6 * joy;
   for (const cheek of cheeks) cheek.position.y = CHEEK_Y + 0.012 * joy;
   smile.morphTargetInfluences[0] = joy;
+
+  snowCard.emissiveIntensity = THREE.MathUtils.lerp(SNOW_GLOW.night, SNOW_GLOW.day, getDaylight());
 }
