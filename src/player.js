@@ -37,27 +37,31 @@ const card = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: t
 const COAL = '#2e2a2b', CHEEK = '#f4b096', CARROT = '#f2780f', WOOD = '#7a4a2c';
 const WOOL = '#d8403a', HAT = '#3a3536', HOLLY = '#4c8a3f';
 
-// A chunky, squat body and an oversized head that sinks into it, so the two snowballs overlap. Each
-// snowball is its own group so it can sway separately; the face, hat, scarf and arms ride along.
-const BODY = 0.36, SQUASH = 0.8, HEAD = 0.29;
-const NECK = 0.22; // height of the bottom of the head above the body's centre
+// A tall, bell-shaped body and an oversized round head resting on it, the two snowballs just
+// overlapping at the neck. Each snowball is its own group so it can sway separately; the face, hat,
+// scarf and arms ride along.
+const BODY = 0.38, SQUASH = 1.27, HEAD = 0.29; // SQUASH above 1 stretches the body upward
+const NECK = 0.4; // height of the bottom of the head above the body's centre
 
-// The body is a short, wide, round ball, wider than it is tall, with just its bottom flattened where
-// it sits in the snow.
-const WIDE = 1.12, BASE = -0.82;
+// The body is a soft bell: narrow at the shoulders and swelling toward the bottom, where it is
+// widest, with full, curved sides. Its lower part is cut off flat, leaving a broad base that sits
+// firmly on the snow. bellWidth() is how wide the body is at a height (-1 bottom to 1 top of the
+// ball it starts from), relative to a plain sphere.
+const WIDE = 1.06, BASE = -0.6, BELL = 0.35;
+const bellWidth = (height) => WIDE * (1 - BELL * height);
 
-// Each snowball starts as a geodesic sphere whose corners are nudged a little along the surface, so
-// the facets come out broad and irregular, like hand-cut card, while the outline stays round. Shared
-// corners move together, so the folds never split.
+// Each snowball starts as a geodesic sphere of medium-sized facets whose corners are nudged a little
+// along the surface, so the facets come out slightly irregular, like hand-cut card, while the outline
+// stays round. Shared corners move together, so the folds never split.
 function snowball(radius, shape = (v) => v) {
-  const geometry = new THREE.IcosahedronGeometry(radius, 1);
+  const geometry = new THREE.IcosahedronGeometry(radius, 2);
   const position = geometry.attributes.position, v = new THREE.Vector3(), nudge = new THREE.Vector3();
   const moved = new Map();
   for (let i = 0; i < position.count; i++) {
     v.fromBufferAttribute(position, i);
     const key = v.toArray().map((n) => n.toFixed(4)).join();
     if (!moved.has(key)) {
-      nudge.randomDirection().multiplyScalar(radius * 0.07);
+      nudge.randomDirection().multiplyScalar(radius * 0.035);
       nudge.addScaledVector(v, -nudge.dot(v) / v.lengthSq()); // keep it along the surface
       moved.set(key, shape(v.clone().add(nudge).setLength(radius * (0.99 + Math.random() * 0.02))));
     }
@@ -67,7 +71,8 @@ function snowball(radius, shape = (v) => v) {
   return geometry;
 }
 function bodyShape(v) {
-  return v.set(v.x * WIDE, Math.max(v.y, BASE * BODY), v.z * WIDE);
+  const width = bellWidth(v.y / BODY);
+  return v.set(v.x * width, Math.max(v.y, BASE * BODY), v.z * width);
 }
 
 // The snow is matte card lit by the scene like everything else. Each facet takes one tone from a
@@ -115,7 +120,10 @@ const fade = (distance, reach) => THREE.MathUtils.smoothstep(distance, 0, reach)
 // How far a point is from the other snowball's surface (the body is a squashed, widened sphere), and
 // how high it is above the snow.
 const nearHead = (p) => fade(p.distanceTo(new THREE.Vector3(0, headY, 0)) - HEAD, 0.12);
-const nearBody = (p) => fade(new THREE.Vector3(p.x / WIDE, (p.y - bodyY) / SQUASH, p.z / WIDE).length() - BODY, 0.1);
+const nearBody = (p) => {
+  const y = (p.y - bodyY) / SQUASH, width = bellWidth(y / BODY);
+  return fade(new THREE.Vector3(p.x / width, y, p.z / width).length() - BODY, 0.1);
+};
 const shaded = (open) => (p) => 1 - 0.35 * (1 - open(p)) - 0.3 * (1 - fade(p.y, 0.1));
 
 const snowballs = [
@@ -241,7 +249,7 @@ const bodyMesh = body.children[0];
 bodyMesh.updateMatrix();
 bodyMesh.matrixWorld.copy(bodyMesh.matrix);
 const unsquash = new THREE.Vector3(1, 1 / SQUASH, 1);
-for (const y of [0.14, 0.02, -0.1]) {
+for (const y of [0.24, 0.09, -0.06]) {
   const hit = new THREE.Raycaster(new THREE.Vector3(0.04, y, 1), new THREE.Vector3(0, 0, -1)).intersectObject(bodyMesh)[0];
   const button = new THREE.Mesh(buttonGeometry, card);
   button.scale.z = 0.45;
@@ -256,7 +264,7 @@ const stickGeometry = facets(new THREE.CylinderGeometry(0.016, 0.024, 0.36, 5).t
 const twigGeometry = facets(new THREE.CylinderGeometry(0.009, 0.014, 0.11, 4).translate(0, 0.055, 0), WOOD, 0.08);
 const arms = [-1, 1].map((side) => {
   const arm = new THREE.Group();
-  arm.position.set(side * 0.3, 0.1, 0);
+  arm.position.set(side * 0.28, 0.19, 0);
   arm.rotation.z = -side * 0.62;
   for (const [y, bend] of [[0.24, 0.7], [0.3, -0.55]]) {
     const twig = new THREE.Mesh(twigGeometry, card);
@@ -273,10 +281,10 @@ const arms = [-1, 1].map((side) => {
 // front of the body.
 const wrap = new THREE.Mesh(facets(new THREE.TorusGeometry(0.17, 0.05, 4, 12), WOOL, 0.1), card);
 wrap.rotation.x = Math.PI / 2;
-wrap.position.y = 0.26;
+wrap.position.y = 0.43;
 body.add(wrap);
 // The tail is two flat panels folded at the middle so it lies along the curve of the body.
-for (const [y, z, length, tilt] of [[0.2, 0.3, 0.17, 0.95], [0.075, 0.398, 0.16, 0.35]]) {
+for (const [y, z, length, tilt] of [[0.335, 0.242, 0.18, 0.59], [0.18, 0.34, 0.186, 0.54]]) {
   const panel = new THREE.Mesh(facets(new THREE.BoxGeometry(0.095, length, 0.02), WOOL, 0.1), card);
   panel.position.set(-0.07, y, z);
   panel.rotation.set(-tilt, -0.2, 0);
