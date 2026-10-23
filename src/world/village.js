@@ -1,6 +1,6 @@
 import { place, placeBlocked } from './planet.js';
-import { makeTree, makeHouse, makePathDot } from './props.js';
-import { placeBlenderHouse } from './blenderHouse.js';
+import { makeTree, makePathDot } from './props.js';
+import { placeHouses } from './houses.js';
 
 // A curved breadcrumb path and a warm village near the starting location.
 export function buildVillage() {
@@ -13,10 +13,16 @@ export function buildVillage() {
   const trees = [[9, -12, 1.0], [12, 10, 0.83], [-8, 15, 0.85], [17, -18, 0.72], [-16, -18, 0.9], [3, 29, 0.75], [-20, 28, 0.85], [-3, -37, 0.76]];
   trees.forEach(([lat, lon, s]) => placeBlocked(makeTree(s), lat, lon, 0.04, 0.27 + s * 0.18));
 
-  // The Blender-made house stands in for the red house that used to be here.
-  placeBlenderHouse(11, 9);
-  const houses = [['#e8a85e', 8, 17], ['#7b9bd0', -5, 13], ['#bf789a', 14, -10], ['#77aab2', -13, 23], ['#d68c58', 19, 22], ['#9c6bb0', -19, -25]];
-  houses.forEach(([color, lat, lon]) => placeBlocked(makeHouse(color), lat, lon, 0.05, 0.55));
+  // Four Blender-made designs, told apart further by wall colour and whether anyone's home.
+  placeHouses([
+    { design: 'Cottage', wall: '#a3301f', light: 1, lat: 11, lon: 9 },
+    { design: 'Townhouse', wall: '#d6a043', light: 1, lat: 8, lon: 17 },
+    { design: 'Cabin', wall: '#7f97a6', light: 1, lat: -5, lon: 13 },
+    { design: 'Aframe', wall: '#7d9568', light: 1, lat: 14, lon: -10 },
+    { design: 'Townhouse', wall: '#efe8da', light: 0.12, lat: -13, lon: 23 },
+    { design: 'Cabin', wall: '#a3301f', light: 0.85, lat: 19, lon: 22 },
+    { design: 'Aframe', wall: '#b8603a', light: 0.5, lat: -19, lon: -25 },
+  ]);
 
   // Denser forest pockets sit outside the broad, winding central path so they become landmarks, not dead ends.
   for (let i = 0; i < 40; i++) {

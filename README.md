@@ -31,15 +31,16 @@ src/
   grain.js            kraft-paper grain shader added to every lit surface
   world/
     planet.js         planet mesh, surface placement, collision blockers
-    props.js          tree, house and path-stone builders
+    props.js          tree and path-stone builders
     village.js        where everything is placed
-    blenderHouse.js   loads and places the Blender-made house
+    houses.js         instanced Blender house designs, tinted per house
     models/           GLB models exported from art/blender/
     bell.js           bell landmark and its swing
   ui/hud.js           sound/view buttons, bell prompt and button, toast
   ui/touch.js         touch detection and the on-screen joystick
   debug/tuner.js      ?debug tuning panel (loaded only when requested)
   styles.css
+public/draco/         Draco decoder for compressed models (copied from three.js)
 art/blender/          scripts that build, render and export Blender models (see its README)
 ```
 

@@ -8,7 +8,7 @@ Variants: "day" (golden afternoon) and "dusk" (blue hour, windows doing the work
 Everything is built from code so the look can be tuned and ported to Three.js.
 """
 import bpy, bmesh, math, random, sys, os, argparse
-from mathutils import Vector, noise
+from mathutils import Matrix, Vector, noise
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
@@ -17,9 +17,10 @@ ap.add_argument("--samples", type=int, default=128)
 ap.add_argument("--res", type=int, nargs=2, default=[1600, 1200])
 ap.add_argument("--out", default="renders/house.png")
 ap.add_argument("--blend", default="")
-ap.add_argument("--export", default="", help="write the house alone as a baked GLB for the web")
-ap.add_argument("--bake-size", type=int, default=1024)
+ap.add_argument("--export", default="", help="write every house design as one baked GLB for the web")
+ap.add_argument("--bake-size", type=int, default=2048)
 ap.add_argument("--closeup", action="store_true", help="frame the red house instead of the whole tile")
+ap.add_argument("--lineup", action="store_true", help="render every house design side by side")
 args = ap.parse_args(argv)
 DUSK = args.variant == "dusk"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -239,6 +240,9 @@ M = dict(
     wreath=noisy_mat("Wreath", (0.06, 0.18, 0.06), (0.12, 0.28, 0.10), scale=30, bump=0.4),
     smoke=mat("Smoke", (0.80, 0.80, 0.82), rough=1.0),
     brick=brick_mat(),
+    shutter=wood_mat("Shutter", (0.10, 0.16, 0.12), board=0.06, vary=0.2),
+    # Walls for the web export are baked near-white; the browser tints them per house.
+    wall_neutral=wood_mat("WallNeutral", (0.82, 0.82, 0.80)),
     bush=noisy_mat("Bush", (0.07, 0.16, 0.08), (0.13, 0.25, 0.10), scale=9, rough=0.9, bump=0.3),
 )
 
@@ -342,8 +346,11 @@ def spill_light(parent, w, h, power, y=-0.22):
     ob.visible_camera = False
     return link(ob, parent)
 
-def window(parent, w, h, mullions=True, curtains=True, sill=True, power=None):
+def window(parent, w, h, mullions=True, curtains=True, sill=True, shutters=False, power=None):
     f, d = 0.055, 0.07
+    if shutters:
+        for x in (w / 2 + f + 0.085, -w / 2 - f - 0.085):
+            box("Shutter", (x, -0.02, 0), (0.15, 0.03, h + 0.06), M["shutter"], parent, bev=0.006, jit=0.004)
     no_shadow(box("Glass", (0, 0, 0), (w, 0.02, h), M["glass"], parent, bev=0))
     for z in (h / 2 + f / 2, -h / 2 - f / 2):
         box("Frame", (0, -0.02, z), (w + 2 * f, d, f), M["trim"], parent, bev=0.008)
@@ -410,7 +417,8 @@ def bush(parent, x, y, s):
 
 FACES = {"front": 0.0, "right": math.pi / 2, "back": math.pi, "left": -math.pi / 2}
 
-def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None, bushes=(), rz=0.0):
+def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None, bushes=(), rz=0.0,
+          porch=False, leanto=False, stovepipe=None):
     root = empty(name, loc, rz)
     base = 0.22
     box("Foundation", (0, 0, base / 2), (W + 0.12, D + 0.12, base), M["stone"], root, bev=0.02, jit=0.01)
@@ -496,6 +504,42 @@ def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None
             blob("Smoke", (cx + 0.15 * k + 0.05, cy - 0.05 * k, h1 + 0.35 + 0.42 * k),
                  (0.08 + 0.05 * k,) * 3, M["smoke"], jit=0.2, parent=root)
 
+    if porch and door:
+        # A small porch roof on two posts over the front door.
+        u, w, h = door
+        pw, pd, top = w + 0.55, 0.62, base + h + 0.32
+        for x in (u - pw / 2 + 0.05, u + pw / 2 - 0.05):
+            box("PorchPost", (x, -D / 2 - pd + 0.06, (base + top) / 2 - 0.05), (0.07, 0.07, top - base - 0.1),
+                M["trim"], root, rot=(0, random.uniform(-.02, .02), 0), bev=0.008, jit=0.004)
+        tilt = 0.32
+        box("PorchRoof", (u, -D / 2 - pd / 2, top), (pw + 0.1, pd + 0.12, 0.05), M["roof"], root,
+            rot=(tilt, 0, 0), bev=0.006)
+        box("PorchSnow", (u, -D / 2 - pd / 2 - 0.01, top + 0.06), (pw + 0.06, pd + 0.08, 0.08), M["snow_roof"], root,
+            rot=(tilt, 0, 0), bev=0.03, segs=2, jit=0.02)
+        box("PorchStep", (u, -D / 2 - pd / 2, 0.06), (pw, pd, 0.12), M["stone"], root, bev=0.015, jit=0.01)
+
+    if leanto:
+        # A woodshed lean-to against the right wall, with a single-slope roof.
+        lw, ld, lh = 0.8, 1.2, Hw * 0.75
+        cx, cy = W / 2 + lw / 2, 0.15
+        box("LeanWalls", (cx, cy, base + lh / 2 - 0.02), (lw, ld, lh), wall_m, root, bev=0.01, jit=0.01)
+        box("LeanBase", (cx, cy, base / 2), (lw + 0.06, ld + 0.06, base), M["stone"], root, bev=0.015, jit=0.01)
+        slope = math.atan2(0.35, lw)
+        rz_ = base + lh + 0.17
+        box("LeanRoof", (cx + 0.05, cy, rz_), (lw + 0.3, ld + 0.25, 0.05), M["roof"], root, rot=(0, slope, 0), bev=0.006)
+        box("LeanSnow", (cx + 0.05, cy, rz_ + 0.06), (lw + 0.26, ld + 0.2, 0.08), M["snow_roof"], root,
+            rot=(0, slope, 0), bev=0.03, segs=2, jit=0.02)
+        g = empty("Win", (cx, cy - ld / 2, base + lh * 0.55), 0.0, root)
+        window(g, 0.3, 0.26, curtains=False)
+
+    if stovepipe:
+        # A thin iron stovepipe instead of a chimney.
+        px, py = stovepipe
+        roof_z = ridge - abs(px) * math.tan(a)
+        cone("Stovepipe", (px, py, roof_z + 0.3), 0.06, 0.06, 0.75, M["iron"], segs=8, parent=root)
+        cone("StoveCap", (px, py, roof_z + 0.72), 0.12, 0.02, 0.1, M["iron"], segs=8, parent=root)
+        blob("StoveSnow", (px, py, roof_z + 0.78), (0.09, 0.09, 0.03), M["snow_roof"], jit=0.2, parent=root)
+
     for x, y, sz in bushes:
         bush(root, x, y, sz)
     return root
@@ -505,6 +549,44 @@ def add_point(parent, loc, power):
     ld.energy = power; ld.color = (1.0, 0.66, 0.36); ld.shadow_soft_size = 0.06
     ob = bpy.data.objects.new("Glow", ld); ob.location = loc
     return link(ob, parent)
+
+# House designs for the planet. Each is a recipe for house(); the web export bakes all of them into one
+# shared texture and the browser colours their walls per house.
+B0 = 0.22  # foundation height
+DESIGNS = {
+    # The red cottage: gable to the front, door and window below, attic window above.
+    "Cottage": dict(W=2.0, D=2.6, Hw=1.25, rise=1.15, color=(0.42, 0.055, 0.035),
+        windows=[("front", 0.45, B0 + 0.78, 0.48, 0.58, {}), ("front", 0.0, 2.05, 0.3, 0.36, {"curtains": False}),
+                 ("right", -0.6, B0 + 0.72, 0.5, 0.6, {}), ("right", 0.6, B0 + 0.72, 0.5, 0.6, {})],
+        door=(-0.45, 0.5, 0.92), chimney=(0.5, 0.55),
+        bushes=[(0.3, -1.52, 1.0), (0.78, -1.48, 0.75), (-0.98, -1.47, 0.85), (1.22, 0.02, 0.95),
+                (1.2, 1.08, 0.7), (-1.17, 1.45, 0.8)]),
+    # Tall and narrow, two storeys, shuttered windows.
+    "Townhouse": dict(W=1.7, D=2.1, Hw=2.15, rise=1.0, color=(0.72, 0.45, 0.12),
+        windows=[("front", 0.42, B0 + 0.78, 0.36, 0.5, {}),
+                 ("front", -0.42, B0 + 1.7, 0.38, 0.52, {"shutters": True}),
+                 ("front", 0.42, B0 + 1.7, 0.38, 0.52, {"shutters": True}),
+                 ("front", 0.0, B0 + 2.65, 0.26, 0.3, {"curtains": False}),
+                 ("right", -0.4, B0 + 0.75, 0.4, 0.5, {}), ("right", 0.4, B0 + 1.7, 0.4, 0.5, {})],
+        door=(-0.36, 0.44, 0.95), chimney=(-0.4, 0.45),
+        bushes=[(-0.55, -1.2, 0.7), (0.55, -1.2, 0.7), (1.0, 0.75, 0.75)]),
+    # Long and low with a shallow roof and a porch over the door.
+    "Cabin": dict(W=2.5, D=3.0, Hw=0.95, rise=0.62, color=(0.30, 0.42, 0.50),
+        windows=[("front", -0.6, B0 + 0.55, 0.5, 0.42, {}),
+                 ("right", -0.95, B0 + 0.55, 0.42, 0.42, {}), ("right", 0.0, B0 + 0.55, 0.42, 0.42, {}),
+                 ("right", 0.95, B0 + 0.55, 0.42, 0.42, {})],
+        door=(0.5, 0.48, 0.85), chimney=(-0.7, 0.9), porch=True,
+        bushes=[(-1.3, -1.65, 0.8), (1.45, -0.6, 0.8), (1.45, 1.3, 0.65)]),
+    # Small and steep, almost an A-frame, with a lean-to woodshed and a stovepipe.
+    "Aframe": dict(W=1.6, D=2.0, Hw=0.7, rise=1.55, color=(0.33, 0.43, 0.28),
+        windows=[("front", 0.0, B0 + 1.35, 0.4, 0.46, {})],
+        door=(0.0, 0.46, 0.85), leanto=True, stovepipe=(-0.38, 0.35),
+        bushes=[(-0.75, -1.2, 0.75), (0.55, -1.25, 0.6)]),
+}
+
+def build_design(key, loc, wall_m=None):
+    d = dict(DESIGNS[key]); color = d.pop("color")
+    return house(key, loc, wall_m=wall_m or wood_mat(f"Wall{key}", color), **d)
 
 hx, hy, _, _, hz = FLAT[0]
 house("House", (hx, hy, hz), W=2.0, D=2.6, Hw=1.25, rise=1.15, wall_m=M["falu"],
@@ -750,78 +832,127 @@ def bake_into(obj, kind, size, samples):
     px = np.empty(size * size * 4, dtype=np.float32); img.pixels.foreach_get(px)
     return px.reshape(-1, 4)
 
-def export_house(path):
+def mesh_copy(ob, dg, offset):
+    """The object's mesh with modifiers applied, in its design's own space."""
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    me.transform(ob.matrix_world)
+    me.transform(Matrix.Translation(-offset))
+    return me
+
+def export_designs(path):
+    """Every design in one GLB. Per design: <Key>_Body (baked colour + AO), <Key>_Walls (same texture,
+    baked near-white so the browser can tint it), <Key>_Glow (two emissive materials) and Halo_<Key>
+    empties on each pane. All bodies and walls share one texture atlas."""
     import numpy as np
-    root = bpy.data.objects["House"]
-    keep = set(descendants(root))
-    root.location = (0, 0, 0)  # origin at the foundation's base, centred
+    for ob in list(scene.objects): bpy.data.objects.remove(ob)
+    keys = list(DESIGNS)
+    offsets = {k: Vector((i * 8.0, 0, 0)) for i, k in enumerate(keys)}
+    roots = {k: build_design(k, offsets[k], wall_m=M["wall_neutral"]) for k in keys}
     bpy.context.view_layer.update()
     dg = bpy.context.evaluated_depsgraph_get()
-    body, glow, halos = [], [], []
-    for ob in keep:
-        if ob.type != "MESH" or ob.name.startswith(SKIP): continue
-        # Mark each pane with an empty sized to it; the browser hangs a soft glow halo on these.
-        if ob.name.startswith(("Glass", "LanternGlass")):
-            h = bpy.data.objects.new("Halo", None)
-            h.matrix_world = ob.matrix_world
-            h.scale = (ob.dimensions.x, 1.0, ob.dimensions.z)
-            halos.append(link(h))
-        me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))  # bevels applied
-        me.transform(ob.matrix_world)
-        copy = link(bpy.data.objects.new(ob.name, me))
-        (glow if me.materials[0].name in GLOW_MATS else body).append(copy)
-    for ob in list(scene.objects):
-        if ob not in body and ob not in glow and ob not in halos: bpy.data.objects.remove(ob)
 
-    body = join("HouseBody", body)
-    bpy.context.view_layer.objects.active = body
-    body.select_set(True)
+    parts, glows, halos = [], {k: [] for k in keys}, []
+    for k in keys:
+        for ob in descendants(roots[k]):
+            if ob.type != "MESH" or ob.name.startswith(SKIP): continue
+            if ob.name.startswith(("Glass", "LanternGlass")):
+                h = bpy.data.objects.new(f"Halo_{k}", None)
+                h.matrix_world = Matrix.Translation(-offsets[k]) @ ob.matrix_world
+                h.scale = (ob.dimensions.x, 1.0, ob.dimensions.z)
+                halos.append(link(h))
+            me = mesh_copy(ob, dg, Vector((0, 0, 0)))  # keep the offset while baking so designs don't touch
+            copy = link(bpy.data.objects.new(ob.name, me))
+            if me.materials[0].name in GLOW_MATS:
+                glows[k].append(copy); continue
+            # Tag every face with its design and whether it's a tintable wall, to split after baking.
+            base_name = ob.name.split(".")[0]  # Blender suffixes repeated names: Walls.001
+            tag = keys.index(k) * 2 + (1 if base_name in ("Walls", "LeanWalls") else 0)
+            attr = me.attributes.new("part", "INT", "FACE")
+            attr.data.foreach_set("value", [tag] * len(me.polygons))
+            parts.append(copy)
+    keep = set(parts) | set(halos) | {o for g in glows.values() for o in g}
+    for ob in list(scene.objects):
+        if ob not in keep: bpy.data.objects.remove(ob)
+
+    atlas = join("Atlas", parts)
+    bpy.context.view_layer.objects.active = atlas
+    atlas.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.004)
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.003)
     bpy.ops.object.mode_set(mode="OBJECT")
 
-    # A ground plane during the AO bake gives the foundation and drifts their contact shadow.
-    bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=6)
+    bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=40)
     ground = from_bm("BakeGround", bm, M["snow"])
     size = args.bake_size
-    albedo = bake_into(body, "DIFFUSE", size, 1)
-    ao = bake_into(body, "AO", size, 128)
+    albedo = bake_into(atlas, "DIFFUSE", size, 1)
+    ao = bake_into(atlas, "AO", size, 128)
     bpy.data.objects.remove(ground)
-
-    # Soft baked occlusion multiplied into the colour; the browser adds live sun and sky on top.
     shade = 0.3 + 0.7 * ao[:, :1]
     lin = np.clip(albedo[:, :3] * shade, 0, 1)
     srgb = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
-    out = bpy.data.images.new("HouseColor", size, size)  # 8-bit sRGB: pixels are stored values
-    out.pixels.foreach_set(np.concatenate([srgb, np.ones((size * size, 1))], axis=1).astype(np.float32).ravel())
-    out.file_format = "JPEG"
-    out.filepath_raw = os.path.join(HERE, "renders", "house_color.jpg"); out.save()
+    img = bpy.data.images.new("HouseAtlas", size, size)
+    img.pixels.foreach_set(np.concatenate([srgb, np.ones((size * size, 1))], axis=1).astype(np.float32).ravel())
+    img.file_format = "JPEG"
+    img.filepath_raw = os.path.join(HERE, "renders", "house_atlas.jpg"); img.save()
+    body_mat = plain_mat("HouseBody", (1, 1, 1), image=img)
+    wall_mat = plain_mat("HouseWalls", (1, 1, 1), image=img)
 
-    me = body.data
-    me.materials.clear(); me.materials.append(plain_mat("HouseBaked", (1, 1, 1), image=out))
-    for p in me.polygons: p.material_index = 0
+    # Split the baked atlas mesh back into one body and one wall object per design.
+    tags = [0] * len(atlas.data.polygons)
+    atlas.data.attributes["part"].data.foreach_get("value", tags)
+    out = []
+    for i, k in enumerate(keys):
+        for wall in (0, 1):
+            bm = bmesh.new(); bm.from_mesh(atlas.data)
+            bm.faces.ensure_lookup_table()
+            bmesh.ops.delete(bm, geom=[f for f, t in zip(bm.faces, tags) if t != i * 2 + wall], context="FACES")
+            bmesh.ops.translate(bm, vec=-offsets[k], verts=bm.verts)
+            name = f"{k}_{'Walls' if wall else 'Body'}"
+            ob = from_bm(name, bm, wall_mat if wall else body_mat)
+            for p in ob.data.polygons: p.material_index = 0
+            out.append(ob)
+    bpy.data.objects.remove(atlas)
 
-    glow = join("HouseGlow", glow)
     mats = {}
     for name, (new, color, strength) in GLOW_MATS.items():
         if new not in mats: mats[new] = plain_mat(new, (0, 0, 0), emit=color, strength=strength)
-    old = [m.name for m in glow.data.materials]
-    glow.data.materials.clear()
     order = list(mats)
-    for n in order: glow.data.materials.append(mats[n])
-    for p in glow.data.polygons:
-        p.material_index = order.index(GLOW_MATS[old[p.material_index]][0])
+    for k in keys:
+        g = join(f"{k}_Glow", glows[k])
+        g.data.transform(Matrix.Translation(-offsets[k]))
+        old = [m.name for m in g.data.materials]
+        g.data.materials.clear()
+        for n in order: g.data.materials.append(mats[n])
+        for p in g.data.polygons:
+            p.material_index = order.index(GLOW_MATS[old[p.material_index]][0])
+        out.append(g)
 
-    tris = sum(len(p.vertices) - 2 for o in (body, glow) for p in o.data.polygons)
-    print(f"EXPORT triangles={tris} materials={1 + len(order)} halos={len(halos)}")
+    for o in out:
+        tris = sum(len(p.vertices) - 2 for p in o.data.polygons)
+        print(f"EXPORT {o.name}: {tris} triangles")
+    print(f"EXPORT total={sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in out)} halos={len(halos)}")
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_apply=True,
-                              export_image_format="JPEG", export_jpeg_quality=88,
+                              export_image_format="WEBP", export_image_quality=82,
+                              export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=7,
                               export_yup=True, export_lights=False, export_cameras=False)
 
+def lineup():
+    """Every design side by side on open snow, each in its default wall colour."""
+    keys = list(DESIGNS)
+    for i, k in enumerate(keys):
+        build_design(k, Vector(((i - (len(keys) - 1) / 2) * 4.2, 40.0, 0.0)))
+    bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=14)
+    from_bm("LineupGround", bm, M["snow"], loc=(0, 40, 0.0))
+    look = Vector((0, 0, -1)); look.rotate(cam.rotation_euler)
+    cam.location = Vector((0.6, 40.0, 1.2)) - look * 40
+    cam_d.ortho_scale = 17.5
+
 if args.export:
-    export_house(os.path.abspath(args.export))
+    export_designs(os.path.abspath(args.export))
     sys.exit(0)
+if args.lineup:
+    lineup()
 
 if args.blend:
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, args.blend))

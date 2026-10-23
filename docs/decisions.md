@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-22: Houses are a few instanced designs, varied by colour and light
+
+Rather than one unique model per house, a handful of Blender designs (cottage, townhouse, cabin, A-frame) share one baked texture and are drawn with instancing. Each house picks a design, a wall colour (walls are baked near-white and tinted at runtime) and how lit its windows are. Seven detailed houses cost fewer draw calls than the old primitive houses, replace six point lights with none, and download as one ~770 kB file (Draco meshes, WebP texture). Character should come from silhouettes, colours, lit windows and props before adding new designs.
+
 ## 2026-10-22: Paper and lighting look set from the tuning panel (being evaluated)
 
 Grain and lighting are all tuning values, so the style can be changed without code. The defaults were dialled in by hand in the tuning panel: soft paper grain with some blotches and relief, a low, dim sun from behind, a strong moon, little sky fill, and ACES tone mapping. Live ambient occlusion was left out because it's too costly on phones; bake it into models instead.

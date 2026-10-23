@@ -45,45 +45,6 @@ export function makeTree(scale = 1) {
   return g;
 }
 
-export function makeHouse(color) {
-  const g = new THREE.Group();
-  const walls = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.85, 0.95), new THREE.MeshStandardMaterial({ color, flatShading: true }));
-  walls.position.y = 0.45;
-  walls.castShadow = true;
-  g.add(walls);
-
-  const roofRadius = 0.93, roofHeight = 0.72, roofY = 1.16;
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(roofRadius, roofHeight, 4), new THREE.MeshStandardMaterial({ color: '#3c4666', flatShading: true }));
-  roof.position.y = roofY;
-  roof.rotation.y = Math.PI / 4;
-  roof.castShadow = true;
-  g.add(roof);
-
-  // Snow blankets the upper part of the roof: same slope as the roof, raised slightly off it,
-  // so it reads as a layer lying on the roof with a small lip where it ends.
-  const snowHeight = 0.42, snowLift = 0.04;
-  const snowRoof = new THREE.Mesh(
-    new THREE.ConeGeometry(snowHeight * roofRadius / roofHeight, snowHeight, 4),
-    new THREE.MeshStandardMaterial({ color: '#f8fcff', roughness: 1, flatShading: true }),
-  );
-  snowRoof.position.y = roofY + roofHeight / 2 + snowLift - snowHeight / 2;
-  snowRoof.rotation.y = Math.PI / 4;
-  g.add(snowRoof);
-
-  const door = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.38, 0.025), new THREE.MeshStandardMaterial({ color: '#623b32' }));
-  door.position.set(0, 0.22, 0.488);
-  g.add(door);
-
-  const glow = new THREE.PointLight('#ffc464', 1.8, 3.5);
-  glow.position.set(0, 0.68, 0.65);
-  g.add(glow);
-
-  const win = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshBasicMaterial({ color: '#ffd56a' }));
-  win.position.set(0.33, 0.58, 0.49);
-  g.add(win);
-  return g;
-}
-
 export function makePathDot() {
   return new THREE.Mesh(
     new THREE.CylinderGeometry(0.2, 0.25, 0.035, 8),
