@@ -38,17 +38,14 @@ const card = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: t
 const COAL ='#2e2a2b', CHEEK = '#f2a383', CARROT = '#f28a1e', WOOD = '#7a4a2c';
 const WOOL = '#d8403a', HAT = '#3a3536', HOLLY = '#4c8a3f';
 
-// A squat, rounded body and a slightly oversized head that sinks into it, so the two snowballs
-// overlap. Each snowball is its own group so it can sway separately; the face, hat, scarf and arms
-// ride along.
-const BODY = 0.36, SQUASH = 0.88, HEAD = 0.24;
-const NECK = 0.27; // height of the bottom of the head above the body's centre
+// A chunky, squat body and an oversized head that sinks into it, so the two snowballs overlap. Each
+// snowball is its own group so it can sway separately; the face, hat, scarf and arms ride along.
+const BODY = 0.36, SQUASH = 0.8, HEAD = 0.29;
+const NECK = 0.22; // height of the bottom of the head above the body's centre
 
-// The body is pressed into the ground like a pear: widest low down, with its base flattened where it
-// sits in the snow. bodyWidth() is how far the sides bulge at a height (as a fraction of the radius),
-// so buttons and the scarf tail can sit on the surface.
-const BASE = -0.66;
-const bodyWidth = (height) => 1 + 0.07 * (1 - height);
+// The body is a short, wide, round ball, wider than it is tall, with just its bottom flattened where
+// it sits in the snow.
+const WIDE = 1.12, BASE = -0.82;
 
 // Each snowball starts as a geodesic sphere whose corners are nudged a little along the surface, so
 // the facets come out broad and irregular, like hand-cut card, while the outline stays round. Shared
@@ -71,8 +68,7 @@ function snowball(radius, shape = (v) => v) {
   return geometry;
 }
 function bodyShape(v) {
-  const height = v.y / BODY, bulge = bodyWidth(height);
-  return v.set(v.x * bulge, Math.max(height, BASE) * BODY, v.z * bulge);
+  return v.set(v.x * WIDE, Math.max(v.y, BASE * BODY), v.z * WIDE);
 }
 
 // The snow is soft matte card in a studio light. Each facet takes one tone from a small palette of
@@ -242,10 +238,10 @@ const arms = [-1, 1].map((side) => {
 // front of the body.
 const wrap = new THREE.Mesh(facets(new THREE.TorusGeometry(0.17, 0.05, 4, 12), WOOL, 0.1), card);
 wrap.rotation.x = Math.PI / 2;
-wrap.position.y = 0.29;
+wrap.position.y = 0.26;
 body.add(wrap);
 // The tail is two flat panels folded at the middle so it lies along the curve of the body.
-for (const [y, z, length, tilt] of [[0.215, 0.28, 0.17, 0.74], [0.08, 0.375, 0.16, 0.26]]) {
+for (const [y, z, length, tilt] of [[0.2, 0.3, 0.17, 0.95], [0.075, 0.398, 0.16, 0.35]]) {
   const panel = new THREE.Mesh(facets(new THREE.BoxGeometry(0.095, length, 0.02), WOOL, 0.1), card);
   panel.position.set(-0.07, y, z);
   panel.rotation.set(-tilt, -0.2, 0);
