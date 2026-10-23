@@ -43,26 +43,39 @@ function snowTexture() {
   return texture;
 }
 
-// Fine vertical ribs, used as both colour and bump, make the beanie and scarf read as soft knit.
+// Powder-blue knit: fine vertical ribs with soft shadows between them, dusted with tiny light and dark
+// flecks so the fabric reads fuzzy rather than printed. Used as both colour and bump.
 function knitTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 32;
+  canvas.width = 256;
+  canvas.height = 64;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#7b9bd0';
+  ctx.fillStyle = '#a7c4e6';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (let x = 0; x < canvas.width; x += 4) {
     const rib = ctx.createLinearGradient(x, 0, x + 4, 0);
-    rib.addColorStop(0, 'rgba(59, 85, 124, 0.45)');
-    rib.addColorStop(0.5, 'rgba(255, 255, 255, 0.12)');
-    rib.addColorStop(1, 'rgba(59, 85, 124, 0.45)');
+    rib.addColorStop(0, 'rgba(91, 122, 168, 0.4)');
+    rib.addColorStop(0.5, 'rgba(255, 255, 255, 0.18)');
+    rib.addColorStop(1, 'rgba(91, 122, 168, 0.4)');
     ctx.fillStyle = rib;
     ctx.fillRect(x, 0, 4, canvas.height);
+  }
+  for (let i = 0; i < 1400; i++) {
+    ctx.fillStyle = Math.random() < 0.6 ? 'rgba(255, 255, 255, 0.22)' : 'rgba(70, 100, 150, 0.18)';
+    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1 + Math.random() * 2);
   }
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   return texture;
+}
+
+// Matte, plush knit: full roughness, plus a soft fabric sheen that lifts the edges the way felt and
+// fleece catch the light.
+function knitMaterial(ribsAround) {
+  const map = knitTexture();
+  map.repeat.set(ribsAround / 64, 1);
+  return new THREE.MeshPhysicalMaterial({ map, bumpMap: map, bumpScale: 1.5, roughness: 1, sheen: 1, sheenRoughness: 0.85, sheenColor: '#e3eeff' });
 }
 
 // Smooth shading and a satin finish give the soft vinyl-toy look; the snow texture stays as gentle colour only.
@@ -71,11 +84,9 @@ const coal = new THREE.MeshStandardMaterial({ color: '#23232b', roughness: 0.2 }
 const shine = new THREE.MeshBasicMaterial({ color: '#ffffff' });
 const blush = new THREE.MeshStandardMaterial({ color: '#b7ddff', roughness: 0.6 });
 const wood = new THREE.MeshStandardMaterial({ color: '#5f3b25', roughness: 0.7 });
-const knitMap = knitTexture();
-const knit = new THREE.MeshStandardMaterial({ map: knitMap, bumpMap: knitMap, bumpScale: 2, roughness: 0.85 });
-const cuffMap = knitMap.clone();
-cuffMap.repeat.set(4, 1);
-const cuffKnit = new THREE.MeshStandardMaterial({ map: cuffMap, bumpMap: cuffMap, bumpScale: 2, roughness: 0.85 });
+const knit = knitMaterial(128);
+// The scarf wrap's texture runs around a tighter ring, so it needs more repeats to keep the ribs fine.
+const ringKnit = knitMaterial(256);
 
 // A big, fat bottom snowball (squashed a little so it sits heavy), a big-to-medium middle and a
 // medium head. Each snowball is its own group so it can sway separately; the face and arms ride along.
@@ -120,16 +131,29 @@ nose.rotation.x = Math.PI / 2;
 nose.position.set(0, -0.04, 0.25);
 face.add(nose);
 
-// A slouchy ribbed beanie: a low dome, a chunky rolled cuff and a snowy pom-pom.
-const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.208, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), knit);
-beanie.position.y = 0.07;
-beanie.scale.y = 0.9;
-const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.042, 12, 40), cuffKnit);
-cuff.rotation.x = Math.PI / 2;
-cuff.position.y = 0.08;
-const pompom = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), snow);
-pompom.position.y = 0.29;
-face.add(beanie, cuff, pompom);
+// A chunky beanie, turned on a lathe so its ribs run straight up: a puffy rounded crown that bulges a
+// little past the head, and an oversized folded cuff with fully rounded edges sitting low over the eyes.
+const crownProfile = new THREE.SplineCurve([
+  [0.2, 0.08], [0.218, 0.15], [0.214, 0.22], [0.19, 0.28], [0.145, 0.325], [0.08, 0.352], [0, 0.36],
+].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(28);
+const crown = new THREE.Mesh(new THREE.LatheGeometry(crownProfile, 64), knit);
+
+// The cuff's cross-section is a pill: a thick band whose top and bottom edges are full half-circles.
+function pillProfile(inner, outer, bottom, top) {
+  const round = (outer - inner) / 2, points = [];
+  const arc = (cx, cy, from) => {
+    for (let i = 0; i <= 8; i++) {
+      const a = from + (i / 8) * Math.PI;
+      points.push(new THREE.Vector2(cx + Math.cos(a) * round, cy + Math.sin(a) * round));
+    }
+  };
+  arc(inner + round, bottom + round, Math.PI); // bottom edge, inside to outside
+  arc(inner + round, top - round, 0); // top edge, outside to inside
+  points.push(points[0].clone());
+  return points;
+}
+const cuff = new THREE.Mesh(new THREE.LatheGeometry(pillProfile(0.195, 0.262, 0.03, 0.17), 64), knit);
+face.add(crown, cuff);
 
 // Each arm pivots at the shoulder, so the geometry starts at its base rather than its middle.
 const stickGeometry = new THREE.CylinderGeometry(0.016, 0.022, 0.34, 8).translate(0, 0.17, 0);
@@ -148,7 +172,7 @@ const arms = [-1, 1].map((side) => {
 
 // A puffy knit scarf matches the beanie and wraps the neck where the head meets the middle snowball.
 // Its knot and tail sit at the front, marking the explorer's fixed, forward-facing heading.
-const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.045, 12, 32), cuffKnit);
+const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.045, 12, 32), ringKnit);
 wrap.rotation.x = Math.PI / 2;
 wrap.position.y = 0.19;
 const knot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), knit);
