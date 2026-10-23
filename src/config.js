@@ -16,7 +16,7 @@ export const SHOW_TUNER = true;
 export const tuning = {
   walkSpeed: 0.2,
   turnSpeed: 0.35,
-  heroScale: 0.4, // explorer size relative to how the model was first built
+  heroScale: 0.48, // explorer size relative to how the model was first built
   heroHeight: 0,
   snowDensity: 100,
   snowSize: 0.075,

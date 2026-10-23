@@ -12,47 +12,81 @@ const avatar = new THREE.Group();
 hero.add(avatar);
 
 // The explorer is a snowman: three stacked snowballs, coal eyes, a carrot nose and stick arms.
-const snow = new THREE.MeshStandardMaterial({ color: '#f5fbff', flatShading: true });
+// Painted once on a small canvas and shared by every snowball: soft blue-grey hollows and bright flecks
+// read as packed snow without loading an image.
+function snowTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f5fbff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Hollows are drawn three times across the seam so the texture wraps around the sphere cleanly.
+  for (let i = 0; i < 90; i++) {
+    const x = Math.random() * canvas.width, y = Math.random() * canvas.height, r = 4 + Math.random() * 10;
+    for (const dx of [-canvas.width, 0, canvas.width]) {
+      const hollow = ctx.createRadialGradient(x + dx, y, 0, x + dx, y, r);
+      hollow.addColorStop(0, 'rgba(183, 211, 221, 0.35)');
+      hollow.addColorStop(1, 'rgba(183, 211, 221, 0)');
+      ctx.fillStyle = hollow;
+      ctx.fillRect(x + dx - r, y - r, r * 2, r * 2);
+    }
+  }
+  for (let i = 0; i < 500; i++) {
+    ctx.fillStyle = Math.random() < 0.5 ? 'rgba(255, 255, 255, 0.9)' : 'rgba(150, 180, 205, 0.35)';
+    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1.5, 1.5);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+const snowMap = snowTexture();
+const snow = new THREE.MeshStandardMaterial({ map: snowMap, bumpMap: snowMap, bumpScale: 1, roughness: 0.9 });
 const coal = new THREE.MeshStandardMaterial({ color: '#23232b', flatShading: true });
 const wood = new THREE.MeshStandardMaterial({ color: '#5f3b25', flatShading: true });
 
-for (const [radius, y] of [[0.24, 0.22], [0.18, 0.56], [0.14, 0.82]]) {
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), snow);
+// Each snowball is its own group so it can sway separately; the face and arms ride along with theirs.
+const snowballs = [[0.24, 0.22], [0.18, 0.56], [0.14, 0.82]].map(([radius, y]) => {
+  const ball = new THREE.Group();
   ball.position.y = y;
+  ball.add(new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 12), snow));
   avatar.add(ball);
-}
+  return ball;
+});
+const [, middle, head] = snowballs;
 
 const eyeGeometry = new THREE.SphereGeometry(0.026, 6, 4);
 for (const x of [-0.05, 0.05]) {
   const eye = new THREE.Mesh(eyeGeometry, coal);
-  eye.position.set(x, 0.86, 0.125);
-  avatar.add(eye);
+  eye.position.set(x, 0.04, 0.125);
+  head.add(eye);
 }
 
 const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 6), new THREE.MeshStandardMaterial({ color: '#d68c58', flatShading: true }));
 nose.rotation.x = Math.PI / 2;
-nose.position.set(0, 0.81, 0.2);
-avatar.add(nose);
+nose.position.set(0, -0.01, 0.2);
+head.add(nose);
 
 // Each arm pivots at the shoulder, so the geometry starts at its base rather than its middle.
 const stickGeometry = new THREE.CylinderGeometry(0.012, 0.018, 0.34, 5).translate(0, 0.17, 0);
 const twigGeometry = new THREE.CylinderGeometry(0.008, 0.012, 0.12, 4).translate(0, 0.06, 0);
 const arms = [-1, 1].map((side) => {
   const arm = new THREE.Group();
-  arm.position.set(side * 0.15, 0.6, 0);
+  arm.position.set(side * 0.15, 0.04, 0);
   arm.rotation.z = -side * 1.05;
   const twig = new THREE.Mesh(twigGeometry, wood);
   twig.position.y = 0.22;
   twig.rotation.z = side * 0.7;
   arm.add(new THREE.Mesh(stickGeometry, wood), twig);
-  avatar.add(arm);
+  middle.add(arm);
   return arm;
 });
 
 // A bright scarf knot marks the explorer's fixed, forward-facing heading.
 const scarf = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: '#ffd260', flatShading: true }));
-scarf.position.set(0, 0.7, 0.13);
-avatar.add(scarf);
+scarf.position.set(0, 0.14, 0.13);
+middle.add(scarf);
 
 export function applyHeroTuning() {
   avatar.scale.setScalar(tuning.heroScale);
@@ -97,6 +131,12 @@ export function updatePlayer(dt, t) {
 
   // With no legs, the snowman waddles side to side and its arms bob while it walks.
   const swing = walking ? Math.sin(t * 0.014) : 0;
-  avatar.rotation.z = swing * 0.12;
+  avatar.rotation.z = swing * 0.06;
+  // Each snowball lags the one below it, so the stack wobbles like loosely packed snow.
+  snowballs.forEach((ball, i) => {
+    const lag = walking ? Math.sin(t * 0.014 - i * 0.7) : 0;
+    ball.position.x = lag * 0.015 * i;
+    ball.rotation.z = lag * 0.1;
+  });
   arms.forEach((arm, i) => { arm.rotation.x = swing * 0.3 * (i ? 1 : -1); });
 }
