@@ -11,23 +11,47 @@ hero.rotation.x = Math.PI / 2;
 const avatar = new THREE.Group();
 hero.add(avatar);
 
-const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.42, 4, 8), new THREE.MeshStandardMaterial({ color: '#9c6bb0', flatShading: true }));
-body.rotation.x = Math.PI / 2;
-body.position.y = 0.35;
-avatar.add(body);
+// The explorer is a snowman: three stacked snowballs, coal eyes, a carrot nose and stick arms.
+const snow = new THREE.MeshStandardMaterial({ color: '#f5fbff', flatShading: true });
+const coal = new THREE.MeshStandardMaterial({ color: '#23232b', flatShading: true });
+const wood = new THREE.MeshStandardMaterial({ color: '#5f3b25', flatShading: true });
 
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 8), new THREE.MeshStandardMaterial({ color: '#f5c7a9', flatShading: true }));
-head.position.y = 0.73;
-avatar.add(head);
+for (const [radius, y] of [[0.24, 0.22], [0.18, 0.56], [0.14, 0.82]]) {
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), snow);
+  ball.position.y = y;
+  avatar.add(ball);
+}
 
-const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.36, 0.12), new THREE.MeshStandardMaterial({ color: '#3b557c' })), leg2 = leg1.clone();
-leg1.position.set(-0.1, 0.1, 0);
-leg2.position.set(0.1, 0.1, 0);
-avatar.add(leg1, leg2);
+const eyeGeometry = new THREE.SphereGeometry(0.026, 6, 4);
+for (const x of [-0.05, 0.05]) {
+  const eye = new THREE.Mesh(eyeGeometry, coal);
+  eye.position.set(x, 0.86, 0.125);
+  avatar.add(eye);
+}
+
+const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 6), new THREE.MeshStandardMaterial({ color: '#d68c58', flatShading: true }));
+nose.rotation.x = Math.PI / 2;
+nose.position.set(0, 0.81, 0.2);
+avatar.add(nose);
+
+// Each arm pivots at the shoulder, so the geometry starts at its base rather than its middle.
+const stickGeometry = new THREE.CylinderGeometry(0.012, 0.018, 0.34, 5).translate(0, 0.17, 0);
+const twigGeometry = new THREE.CylinderGeometry(0.008, 0.012, 0.12, 4).translate(0, 0.06, 0);
+const arms = [-1, 1].map((side) => {
+  const arm = new THREE.Group();
+  arm.position.set(side * 0.15, 0.6, 0);
+  arm.rotation.z = -side * 1.05;
+  const twig = new THREE.Mesh(twigGeometry, wood);
+  twig.position.y = 0.22;
+  twig.rotation.z = side * 0.7;
+  arm.add(new THREE.Mesh(stickGeometry, wood), twig);
+  avatar.add(arm);
+  return arm;
+});
 
 // A bright scarf knot marks the explorer's fixed, forward-facing heading.
-const scarf = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), new THREE.MeshStandardMaterial({ color: '#ffd260', flatShading: true }));
-scarf.position.set(0, 0.62, 0.19);
+const scarf = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: '#ffd260', flatShading: true }));
+scarf.position.set(0, 0.7, 0.13);
 avatar.add(scarf);
 
 export function applyHeroTuning() {
@@ -71,11 +95,8 @@ export function updatePlayer(dt, t) {
   if (forward > 0) tryMove(-speed * forward * dt);
   if (forward < 0) tryMove(speed * 0.65 * -forward * dt);
 
-  if (walking) {
-    const swing = Math.sin(t * 0.014) * 0.55;
-    leg1.rotation.x = swing;
-    leg2.rotation.x = -swing;
-  } else {
-    leg1.rotation.x = leg2.rotation.x = 0;
-  }
+  // With no legs, the snowman waddles side to side and its arms bob while it walks.
+  const swing = walking ? Math.sin(t * 0.014) : 0;
+  avatar.rotation.z = swing * 0.12;
+  arms.forEach((arm, i) => { arm.rotation.x = swing * 0.3 * (i ? 1 : -1); });
 }
