@@ -106,7 +106,6 @@ export function placeHouses(houses) {
             instanced(geometry, glowMaterials.get(o.material), mine, lightColor);
             return;
           }
-          o.material.flatShading = true;
           const mesh = instanced(geometry, o.material, mine, kind === 'Walls' ? spot => new THREE.Color(spot.wall) : null);
           mesh.castShadow = mesh.receiveShadow = true;
           addGrain(mesh);

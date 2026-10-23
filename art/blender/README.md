@@ -1,6 +1,6 @@
 # Blender art
 
-`winter_house.py` builds the low-poly winter diorama entirely from code (Blender 5.2), so the look can be tuned in text and reviewed in PRs. Shapes are deliberately a little irregular (lumpy roof snow, slightly off-square walls and frames, a leaning brick chimney) so the house reads as hand-made rather than machine-perfect. Renders and `.blend` files are output and are not committed.
+`winter_house.py` builds the low-poly winter diorama entirely from code (Blender 5.2), so the look can be tuned in text and reviewed in PRs. Shapes are deliberately a little irregular (lumpy roof snow, slightly off-square walls and frames, a leaning brick chimney) so the house reads as hand-made rather than machine-perfect. Snow is smooth-shaded (`soft()`) so drifts look rounded, while walls and trim keep their crisp flat facets. Renders and `.blend` files are output and are not committed.
 
 ## Render the diorama
 

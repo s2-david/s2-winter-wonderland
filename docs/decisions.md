@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-22: The village is a square around the bell, entered by the road
+
+Houses stand in two rings around the bell, facing it, with trees around the edge. One road crosses the square north to south, and the explorer starts on it at the square's north edge, facing the bell. That keeps the third-person camera, which sits behind the explorer, over open road at the start instead of inside a roof. Anything new in the village should keep the road and the camera's view behind the start point clear.
+
 ## 2026-10-22: Houses are a few instanced designs, varied by colour and light
 
 Rather than one unique model per house, a handful of Blender designs (cottage, townhouse, cabin, A-frame) share one baked texture and are drawn with instancing. Each house picks a design, a wall colour (walls are baked near-white and tinted at runtime) and how lit its windows are. Seven detailed houses cost fewer draw calls than the old primitive houses, replace six point lights with none, and download as one ~770 kB file (Draco meshes, WebP texture). Character should come from silhouettes, colours, lit windows and props before adding new designs.

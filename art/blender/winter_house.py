@@ -82,6 +82,11 @@ def blob(name, loc, size, mat, subdiv=1, jit=0.18, parent=None, rz=None):
     bmesh.ops.scale(bm, vec=size, verts=bm.verts)
     return from_bm(name, bm, mat, loc, (0, 0, random.uniform(0, 6.3) if rz is None else rz), parent)
 
+def soft(ob):
+    """Smooth-shade an object so snow reads as soft, rounded drifts instead of hard facets."""
+    for p in ob.data.polygons: p.use_smooth = True
+    return ob
+
 def no_shadow(ob):
     ob.visible_shadow = False
     return ob
@@ -373,8 +378,8 @@ def window(parent, w, h, mullions=True, curtains=True, sill=True, shutters=False
 def snow_blanket(name, parent, rp, dv, nv, base, t0, t1, Ly, t, seed):
     """Roof snow as a lumpy blanket: uneven thickness, wavy gable edges, and a soft lip that curls
     over the eave. Built on a grid in roof space (u down the slope, y along the ridge)."""
-    nu, ny = 9, 14
-    def n(a, b): return noise.noise(Vector((a * 2.1 + seed, b * 2.1, seed * 1.7)))
+    nu, ny = 13, 20  # fine enough to shade smoothly
+    def n(a, b): return noise.noise(Vector((a * 1.6 + seed, b * 1.6, seed * 1.7)))
     bm = bmesh.new(); top, bot = {}, {}
     for i in range(nu + 1):
         for j in range(ny + 1):
@@ -401,7 +406,7 @@ def snow_blanket(name, parent, rp, dv, nv, base, t0, t1, Ly, t, seed):
         bm.faces.new((top[a], bot[a], bot[b], top[b]))
     bmesh.ops.triangulate(bm, faces=bm.faces)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    return from_bm(name, bm, M["snow_roof"], parent=parent)
+    return soft(from_bm(name, bm, M["snow_roof"], parent=parent))
 
 def bush(parent, x, y, s):
     """A low evergreen shrub: a few faceted lumps with snow settled on top."""
@@ -498,7 +503,7 @@ def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None
         lean = (random.uniform(-.03, .03), random.uniform(-.03, .03), 0.05)
         box("Chimney", (cx, cy, (h0 + h1) / 2), (0.3, 0.3, h1 - h0), M["brick"], root, rot=lean, bev=0.012, jit=0.01)
         box("ChimneyCap", (cx, cy, h1 + 0.02), (0.37, 0.37, 0.06), M["stone"], root, rot=lean, bev=0.01, jit=0.012)
-        blob("ChimneySnow", (cx, cy, h1 + 0.07), (0.2, 0.2, 0.06), M["snow_roof"], jit=0.15, parent=root, rz=0.05)
+        soft(blob("ChimneySnow", (cx, cy, h1 + 0.07), (0.2, 0.2, 0.06), M["snow_roof"], jit=0.15, parent=root, rz=0.05))
         for k in range(4):
             t = k / 3
             blob("Smoke", (cx + 0.15 * k + 0.05, cy - 0.05 * k, h1 + 0.35 + 0.42 * k),
@@ -514,8 +519,8 @@ def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None
         tilt = 0.32
         box("PorchRoof", (u, -D / 2 - pd / 2, top), (pw + 0.1, pd + 0.12, 0.05), M["roof"], root,
             rot=(tilt, 0, 0), bev=0.006)
-        box("PorchSnow", (u, -D / 2 - pd / 2 - 0.01, top + 0.06), (pw + 0.06, pd + 0.08, 0.08), M["snow_roof"], root,
-            rot=(tilt, 0, 0), bev=0.03, segs=2, jit=0.02)
+        soft(box("PorchSnow", (u, -D / 2 - pd / 2 - 0.01, top + 0.06), (pw + 0.06, pd + 0.08, 0.08), M["snow_roof"], root,
+            rot=(tilt, 0, 0), bev=0.03, segs=2, jit=0.02))
         box("PorchStep", (u, -D / 2 - pd / 2, 0.06), (pw, pd, 0.12), M["stone"], root, bev=0.015, jit=0.01)
 
     if leanto:
@@ -527,8 +532,8 @@ def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None
         slope = math.atan2(0.35, lw)
         rz_ = base + lh + 0.17
         box("LeanRoof", (cx + 0.05, cy, rz_), (lw + 0.3, ld + 0.25, 0.05), M["roof"], root, rot=(0, slope, 0), bev=0.006)
-        box("LeanSnow", (cx + 0.05, cy, rz_ + 0.06), (lw + 0.26, ld + 0.2, 0.08), M["snow_roof"], root,
-            rot=(0, slope, 0), bev=0.03, segs=2, jit=0.02)
+        soft(box("LeanSnow", (cx + 0.05, cy, rz_ + 0.06), (lw + 0.26, ld + 0.2, 0.08), M["snow_roof"], root,
+            rot=(0, slope, 0), bev=0.03, segs=2, jit=0.02))
         g = empty("Win", (cx, cy - ld / 2, base + lh * 0.55), 0.0, root)
         window(g, 0.3, 0.26, curtains=False)
 
@@ -538,7 +543,7 @@ def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None
         roof_z = ridge - abs(px) * math.tan(a)
         cone("Stovepipe", (px, py, roof_z + 0.3), 0.06, 0.06, 0.75, M["iron"], segs=8, parent=root)
         cone("StoveCap", (px, py, roof_z + 0.72), 0.12, 0.02, 0.1, M["iron"], segs=8, parent=root)
-        blob("StoveSnow", (px, py, roof_z + 0.78), (0.09, 0.09, 0.03), M["snow_roof"], jit=0.2, parent=root)
+        soft(blob("StoveSnow", (px, py, roof_z + 0.78), (0.09, 0.09, 0.03), M["snow_roof"], jit=0.2, parent=root))
 
     for x, y, sz in bushes:
         bush(root, x, y, sz)
