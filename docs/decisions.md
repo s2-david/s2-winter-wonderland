@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-23: Pillowy snow instead of a faceted planet
+
+The ground is a finely divided sphere with smooth shading, raised into soft drifts: about 70 broad mounds with 220 smaller ones on top, seeded so the planet is the same on every visit. `snowHeight()` in `src/world/planet.js` gives the height anywhere, so the explorer rides over the drifts, and landmarks are still raycast onto the real surface. The faint faceted ice shell was removed because the drifts would poke through it. The ground went from under 1k to about 20k triangles, one draw call, which is the price of round drifts.
+
 ## 2026-10-22: The village is a square around the bell, entered by the road
 
 Houses stand in two rings around the bell, facing it, with trees around the edge. One road crosses the square north to south, and the explorer starts on it at the square's north edge, facing the bell. That keeps the third-person camera, which sits behind the explorer, over open road at the start instead of inside a roof. Anything new in the village should keep the road and the camera's view behind the start point clear.
