@@ -18,6 +18,14 @@ Grain and lighting are all tuning values, so the style can be changed without co
 
 To move toward a handmade paper-model look, every lit surface gets a procedural kraft-paper grain (blotchy tone, fine fibres) in its shader instead of baked textures. One shader patch keeps the scene consistent, adds no downloads or draw calls, and is pinned to the planet so it doesn't swim as the planet turns. Fine detail fades out with distance to avoid shimmer. The strength is a tuning slider (default 1.5, 0 turns it off) while the look is being decided. The Blender house was simplified to match: thin crisp roof snow, no icicles or snow lumps.
 
+## 2026-10-22: Tree variety from a few shapes, not one model per tree
+
+Trees come in four shapes (`fir`, `spruce` tall and narrow, `bush` short and wide, `spire` slim), each built once in code and merged into one vertex-coloured mesh: 2 draw calls per shape including shadows. Each tree is further varied by its own width, height and a random turn, and some stand in clusters. Their snow follows the houses' Blender style: roughened, with uneven dripping edges, small lumps over the edges and a drift at the foot. All randomness is seeded, so the planet looks the same on every visit.
+
+## 2026-10-22: Repeated props are instanced behind placeable anchors
+
+Trees and path dots are drawn with one `InstancedMesh` per part (6 for trees, 1 for path dots) instead of one mesh per part per tree, which took the wide planet view from about 280 draw calls to 55. `makeTree()` and `makePathDot()` still return an object that `place()` / `placeBlocked()` position, so village code and collision blockers did not change: the object is an empty anchor whose pose is copied into the instances when it is added to the world. Each instanced mesh is culled as a whole, so off-screen trees now cost triangles in the close view (about 15k instead of 12k), which is well inside the budget. Anchors are placed once; moving or removing one later does not update its instances.
+
 ## 2026-10-22: Blender models are scripted and baked for the web
 
 The first authored model (the red Scandinavian house) is built by a Python script in `art/blender/` rather than by hand, so changes are reviewable and repeatable. The web export merges the model into one mesh, bakes procedural colour and ambient occlusion into one texture, and keeps windows as emissive materials: 3 draw calls and no lights. Sun shadows are not baked because the planet rotates under a fixed sun. Glow on the snow is faked with an additive decal instead of a point light. Mesh compression (Draco or meshopt) is not set up yet.

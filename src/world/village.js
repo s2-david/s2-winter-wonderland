@@ -1,5 +1,5 @@
 import { place, placeBlocked } from './planet.js';
-import { makeTree, makePathDot } from './props.js';
+import { makeTree, treeReach, makePathDot } from './props.js';
 import { placeHouses } from './houses.js';
 import { BELL_SPOT } from './bell.js';
 
@@ -44,24 +44,44 @@ export function buildVillage() {
     ...outer.map(([design, wall, light, angle]) => ({ design, wall, light, ...aroundBell(24, angle), facing: BELL_SPOT })),
   ]);
 
-  // Trees: a ring around the village, and a pair flanking the road where it enters each side.
+  // Trees: a ring of mixed shapes around the village, and a pair flanking the road where it enters each side.
   for (let k = 0; k < 16; k++) {
     const angle = k * 22.5 + (k % 2 ? 6 : -4);
     if (nearRoad(angle, 12)) continue;
     const s = 0.7 + (k % 3) * 0.12;
     const { lat, lon } = aroundBell(30.5 + (k % 3) * 1.5, angle);
-    placeBlocked(makeTree(s), lat, lon, 0.04, 0.27 + s * 0.18);
+    plantTree(lat, lon, s, { kind: KINDS[k % KINDS.length], width: 0.9 + (k % 4) * 0.08, height: 0.9 + (k % 3) * 0.1 }, 0.04);
   }
   for (const angle of [70, 110, 250, 290]) {
     const { lat, lon } = aroundBell(18.5, angle);
-    placeBlocked(makeTree(0.75), lat, lon, 0.04, 0.27 + 0.75 * 0.18);
+    plantTree(lat, lon, 0.75, { kind: 'spruce' }, 0.04);
   }
+
+  // Small stands of mixed trees beyond the ring: a tall one in the middle with smaller, varied ones around it.
+  const clusters = [[30, 5], [150, 4], [200, 6], [330, 5]];
+  clusters.forEach(([angle, count], c) => {
+    const { lat, lon } = aroundBell(40, angle);
+    plantTree(lat, lon, 1.05, { kind: c % 2 ? 'spruce' : 'fir', height: 1.15 }, 0.04);
+    for (let k = 0; k < count; k++) {
+      const a = (k / count + c * 0.13) * Math.PI * 2, d = 3.6 + (k % 2) * 0.9;
+      const kind = KINDS[(k + c) % KINDS.length];
+      const shape = { kind, width: 0.85 + ((k * 7 + c) % 4) * 0.1, height: 0.8 + ((k * 5 + c) % 5) * 0.1 };
+      plantTree(lat + Math.cos(a) * d, lon + Math.sin(a) * d / Math.cos(lat * Math.PI / 180), 0.55 + ((k + c) % 3) * 0.15, shape, 0.03);
+    }
+  });
 
   // Denser forest pockets further out, so the far side of the planet has landmarks too.
   for (let i = 0; i < 40; i++) {
     const lat = (i * 37) % 84 - 42, lon = (i * 71) % 150 - 75;
     if (Math.abs(lat) < 25 && Math.abs(lon) < 42) continue;
     const s = 0.42 + (i % 4) * 0.13;
-    placeBlocked(makeTree(s), lat, lon, 0.03, 0.23 + s * 0.18);
+    plantTree(lat, lon, s, { kind: KINDS[i % KINDS.length], width: 0.85 + (i % 3) * 0.12, height: 0.85 + (i % 5) * 0.1 }, 0.03);
   }
+}
+
+const KINDS = ['fir', 'spruce', 'bush', 'spire'];
+
+// Collision grows with how far the lowest branches reach.
+function plantTree(lat, lon, s, shape = {}, lift) {
+  placeBlocked(makeTree(s, shape), lat, lon, lift, 0.2 + 0.45 * treeReach(s, shape));
 }
