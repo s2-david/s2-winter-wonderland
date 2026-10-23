@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-22: Tree variety from a few shapes, not one model per tree
+
+Trees come in four shapes (`fir`, `spruce` tall and narrow, `bush` short and wide, `spire` slim), each built once in code and merged into one vertex-coloured mesh: 2 draw calls per shape including shadows. Each tree is further varied by its own width, height and a random turn, and some stand in clusters. Their snow follows the houses' Blender style: roughened, with uneven dripping edges, small lumps over the edges and a drift at the foot. All randomness is seeded, so the planet looks the same on every visit.
+
 ## 2026-10-22: Repeated props are instanced behind placeable anchors
 
 Trees and path dots are drawn with one `InstancedMesh` per part (6 for trees, 1 for path dots) instead of one mesh per part per tree, which took the wide planet view from about 280 draw calls to 55. `makeTree()` and `makePathDot()` still return an object that `place()` / `placeBlocked()` position, so village code and collision blockers did not change: the object is an empty anchor whose pose is copied into the instances when it is added to the world. Each instanced mesh is culled as a whole, so off-screen trees now cost triangles in the close view (about 15k instead of 12k), which is well inside the budget. Anchors are placed once; moving or removing one later does not update its instances.
