@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { R, tuning } from './config.js';
-import { world, blockers } from './world/planet.js';
+import { world, blockers, snowHeight } from './world/planet.js';
 import { moveIntent } from './input.js';
 
 // Explorer stays planted and always faces the forward screen direction while the planet moves underneath.
@@ -65,6 +65,8 @@ function tryMove(amount) {
   return tryMoveAt(shoulder, amount) || tryMoveAt(-shoulder, amount) || tryMoveAt(shoulder * 1.75, amount) || tryMoveAt(-shoulder * 1.75, amount);
 }
 
+const underfoot = new THREE.Vector3(), undo = new THREE.Quaternion();
+
 export function updatePlayer(dt, t) {
   const { forward, turn } = moveIntent();
 
@@ -77,6 +79,10 @@ export function updatePlayer(dt, t) {
   const speed = 1.05 * tuning.walkSpeed;
   if (forward > 0) tryMove(-speed * forward * dt);
   if (forward < 0) tryMove(speed * 0.65 * -forward * dt);
+
+  // Ride up and over the snow drifts underfoot.
+  underfoot.set(0, 0, 1).applyQuaternion(undo.copy(world.quaternion).invert());
+  hero.position.z = R + snowHeight(underfoot);
 
   if (walking) {
     const swing = Math.sin(t * 0.014) * 0.55;

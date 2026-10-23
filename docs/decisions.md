@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-23: Pillowy snow instead of a faceted planet
+
+The ground is a finely divided sphere with smooth shading, raised into soft drifts: about 70 broad mounds with 220 smaller ones on top, seeded so the planet is the same on every visit. `snowHeight()` in `src/world/planet.js` gives the height anywhere, so the explorer rides over the drifts, and landmarks are still raycast onto the real surface. The faint faceted ice shell was removed because the drifts would poke through it. The ground went from under 1k to about 20k triangles, one draw call, which is the price of round drifts.
+
 ## 2026-10-23: Time of day follows where you are on the planet
 
 There is no clock. The village is always at night, and walking toward the far side of the planet brings up the day, blending each light value from its night tuning to its day tuning. The lights already move with the explorer rather than the planet, so this costs nothing extra and keeps the village's lit windows at their best. Future villages get their time of day from where they sit on the planet.
