@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-23: Time of day follows where you are on the planet
+
+There is no clock. The village is always at night, and walking toward the far side of the planet brings up the day, blending each light value from its night tuning to its day tuning. The lights already move with the explorer rather than the planet, so this costs nothing extra and keeps the village's lit windows at their best. Future villages get their time of day from where they sit on the planet.
+
 ## 2026-10-22: The village is a square around the bell, entered by the road
 
 Houses stand in two rings around the bell, facing it, with trees around the edge. One road crosses the square north to south, and the explorer starts on it at the square's north edge, facing the bell. That keeps the third-person camera, which sits behind the explorer, over open road at the start instead of inside a roof. Anything new in the village should keep the road and the camera's view behind the start point clear.

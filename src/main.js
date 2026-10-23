@@ -9,6 +9,7 @@ import { toggleView, updateCamera } from './cameraRig.js';
 import { snow, applySnowTuning, updateSnow } from './snow.js';
 import { jingle } from './audio.js';
 import { addGrain, applyGrainTuning, updateGrain } from './grain.js';
+import { updateDaylight } from './daylight.js';
 import { onKey } from './input.js';
 import { showBellPrompt, showToast, onBellButton } from './ui/hud.js';
 import './ui/touch.js';
@@ -52,6 +53,7 @@ function loop(t) {
   const dt = Math.min(0.05, (t - elapsed) / 1000 || 0.016);
   elapsed = t;
   updatePlayer(dt, t);
+  updateDaylight();
   updateCamera();
   updateSnow(dt);
   updateBell(dt);
