@@ -19,7 +19,7 @@ avatar.rotation.y = FACE_CAMERA;
 hero.add(avatar);
 
 // The explorer is a papercraft snowman: two low-poly snowballs folded from matte card, each facet a
-// slightly different tone, with a chunky powder-blue knit beanie, a matching scarf and coal buttons. It's
+// slightly different tone, with a black top hat trimmed in holly, a red scarf and coal buttons. It's
 // modelled in Blender (art/blender/snowman.py) with the tones and soft occlusion baked into vertex
 // colours, and every part shares one matte card material here.
 const card = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 });
