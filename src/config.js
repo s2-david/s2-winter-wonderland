@@ -18,8 +18,10 @@ export const tuning = {
   turnSpeed: 0.35,
   heroScale: 0.4, // explorer size relative to how the model was first built
   snowDensity: 100,
-  snowSize: 0.075,
+  snowSize: 0.07,
   snowSpeed: 0.2,
+  snowJitter: 0.04, // how far each flake flutters off its path
+  snowInertia: 0.35, // seconds the snow takes to catch up when the planet starts or stops turning
   // Paper grain on surfaces (src/grain.js). Strength 0 turns it off.
   // Paper and light defaults were dialled in with the tuning panel.
   grain: 0.95,

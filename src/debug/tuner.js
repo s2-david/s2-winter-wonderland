@@ -9,6 +9,8 @@ const controls = [
   { key: 'snowDensity', label: 'Snow density', min: 0, max: 100, step: 1, format: v => `${v}%` },
   { key: 'snowSize', label: 'Snow size', min: 0.03, max: 0.24, step: 0.005, format: v => v.toFixed(3) },
   { key: 'snowSpeed', label: 'Snow speed', min: 0.2, max: 3.5, step: 0.05, format: v => v.toFixed(2) },
+  { key: 'snowJitter', label: 'Snow flutter', min: 0, max: 0.2, step: 0.005, format: v => v.toFixed(3) },
+  { key: 'snowInertia', label: 'Snow inertia', min: 0, max: 3, step: 0.05, format: v => `${v.toFixed(2)}s` },
   { heading: 'Paper' },
   { key: 'grain', label: 'Grain', min: 0, max: 2.5, step: 0.05, format: v => `${v.toFixed(2)}×` },
   { key: 'grainBlotch', label: 'Blotches', min: 0, max: 2, step: 0.05, format: v => `${v.toFixed(2)}×` },
