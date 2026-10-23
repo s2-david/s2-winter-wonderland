@@ -68,8 +68,6 @@ body.touch #bellButton.show { opacity: .8; transform: scale(1); pointer-events: 
 .tune-row input { width: 100%; }
 .tune-value { color: #bde9ff; font-variant-numeric: tabular-nums; text-align: right; }
 .tune-copy { width: 100%; margin-top: 8px; padding: 8px 12px; font-size: .8rem; }
-.tune-looks { display: flex; gap: 6px; }
-.tune-looks button { flex: 1; padding: 7px 6px; font-size: .74rem; }
 
 @media (max-width: 600px) {
   .brand { top: 16px; left: 16px; }

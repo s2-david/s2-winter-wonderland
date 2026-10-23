@@ -17,12 +17,11 @@ export const tuning = {
   walkSpeed: 0.2,
   turnSpeed: 0.35,
   heroScale: 0.4, // explorer size relative to how the model was first built
-  heroHeight: 0,
   snowDensity: 100,
   snowSize: 0.075,
   snowSpeed: 0.2,
   // Paper grain on surfaces (src/grain.js). Strength 0 turns it off.
-  // Paper and light defaults were dialled in with the tuning panel; its look buttons compare alternatives.
+  // Paper and light defaults were dialled in with the tuning panel.
   grain: 0.95,
   grainBlotch: 0.9, // large soft patches of tone
   grainSize: 0.6, // bigger is coarser fibres and grit

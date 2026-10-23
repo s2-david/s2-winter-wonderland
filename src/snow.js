@@ -3,7 +3,7 @@ import { tuning } from './config.js';
 
 // Snow falls along the camera's visible vertical (the planet's local +Z at the starting view),
 // so it clearly drifts downward rather than reading as motion away from the viewer.
-const flakes = 650;
+const flakes = 1300;
 const pos = new Float32Array(flakes * 3);
 for (let i = 0; i < flakes; i++) {
   pos[i * 3] = (Math.random() - 0.5) * 22;
@@ -19,7 +19,8 @@ export const snow = new THREE.Points(snowGeo, snowMaterial);
 export function applySnowTuning() {
   const intensity = tuning.snowDensity / 100;
   snowGeo.setDrawRange(0, Math.round(flakes * intensity));
-  snowMaterial.opacity = 0.15 + 0.75 * intensity;
+  // Flakes reach full opacity at 50%, so the top half of the slider only adds more of them.
+  snowMaterial.opacity = 0.15 + 0.75 * Math.min(1, intensity * 2);
   snowMaterial.size = tuning.snowSize;
 }
 

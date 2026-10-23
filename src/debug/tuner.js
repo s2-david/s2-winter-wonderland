@@ -6,7 +6,6 @@ const controls = [
   { key: 'walkSpeed', label: 'Walk speed', min: 0.2, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
   { key: 'turnSpeed', label: 'Turn speed', min: 0.2, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
   { key: 'heroScale', label: 'Hero size', min: 0.2, max: 1.2, step: 0.01, format: v => `${v.toFixed(2)}×` },
-  { key: 'heroHeight', label: 'Hero height', min: 0, max: 0.6, step: 0.01, format: v => v.toFixed(2) },
   { key: 'snowDensity', label: 'Snow density', min: 0, max: 100, step: 1, format: v => `${v}%` },
   { key: 'snowSize', label: 'Snow size', min: 0.03, max: 0.24, step: 0.005, format: v => v.toFixed(3) },
   { key: 'snowSpeed', label: 'Snow speed', min: 0.2, max: 3.5, step: 0.05, format: v => v.toFixed(2) },
@@ -27,25 +26,6 @@ const controls = [
   { key: 'exposure', label: 'Exposure', min: 0.3, max: 2.5, step: 0.01, format: v => v.toFixed(2) },
   { key: 'toneMapping', label: 'Tone map', min: 0, max: 2, step: 1, format: v => ['None', 'ACES', 'AgX'][v] },
 ];
-
-// Whole looks for comparing styles in one click. They only set paper and light values.
-const BEFORE = {
-  grain: 0, grainBlotch: 1, grainSize: 1, grainFibre: 1, grainRelief: 0,
-  sunStrength: 2.6, sunHeight: 32, sunAngle: -39, shadowSoftness: 1, skyFill: 2.3, skyWarmth: 0,
-  moonStrength: 1.1, exposure: 1, toneMapping: 0,
-};
-// "Default" is the shipping values from config.js, captured before any slider moves.
-const DEFAULT = Object.fromEntries(Object.keys(BEFORE).map(key => [key, tuning[key]]));
-const LOOKS = {
-  Default: DEFAULT,
-  Before: BEFORE,
-  Kraft: { ...BEFORE, grain: 1.5 },
-  'Paper studio': {
-    grain: 1, grainBlotch: 0, grainSize: 0.6, grainFibre: 0.6, grainRelief: 1.2,
-    sunStrength: 3.4, sunHeight: 36, sunAngle: -55, shadowSoftness: 4, skyFill: 1.2, skyWarmth: 0.45,
-    moonStrength: 0.4, exposure: 1.15, toneMapping: 2,
-  },
-};
 
 // Lucide "sliders-horizontal" icon (ISC license, lucide.dev)
 const SLIDERS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H3" /><path d="M12 19H3" /><path d="M14 3v4" /><path d="M16 17v4" /><path d="M21 12h-9" /><path d="M21 19h-5" /><path d="M21 5h-7" /><path d="M8 10v4" /><path d="M8 12H3" /></svg>';
@@ -68,11 +48,6 @@ export function mountTuner(onChange) {
   tuner.setAttribute('aria-label', 'Scene tuning');
   tuner.innerHTML = '<h2>Scene tuning</h2><p>Adjust, then copy the values to make them the new defaults.</p>';
 
-  const looks = document.createElement('div');
-  looks.className = 'tune-looks';
-  tuner.append(looks);
-
-  const sliders = {};
   for (const { heading, key, label, min, max, step, format } of controls) {
     if (heading) {
       const h = document.createElement('h3');
@@ -86,28 +61,12 @@ export function mountTuner(onChange) {
     row.innerHTML = `<span>${label}</span><input id="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${tuning[key]}" /><output class="tune-value"></output>`;
     const input = row.querySelector('input'), output = row.querySelector('output');
     output.textContent = format(tuning[key]);
-    sliders[key] = { input, output, format };
     input.addEventListener('input', () => {
       tuning[key] = Number(input.value);
       output.textContent = format(tuning[key]);
       onChange();
     });
     tuner.append(row);
-  }
-
-  for (const [name, values] of Object.entries(LOOKS)) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = name;
-    button.addEventListener('click', () => {
-      Object.assign(tuning, values);
-      for (const [key, { input, output, format }] of Object.entries(sliders)) {
-        input.value = tuning[key];
-        output.textContent = format(tuning[key]);
-      }
-      onChange();
-    });
-    looks.append(button);
   }
 
   const copy = document.createElement('button');

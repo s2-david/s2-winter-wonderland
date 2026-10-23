@@ -4,7 +4,7 @@ Decisions already made, newest first. Check here before reopening a settled ques
 
 ## 2026-10-22: Paper and lighting look set from the tuning panel (being evaluated)
 
-Grain and lighting are all tuning values, so the style can be changed without code. The defaults were dialled in by hand in the tuning panel: soft paper grain with some blotches and relief, a low, dim sun from behind, a strong moon, little sky fill, and ACES tone mapping. The panel's look buttons (Default, Before, Kraft, Paper studio) compare it against the original look and against a brighter studio-lit variant aimed at a papercraft reference. Live ambient occlusion was left out because it's too costly on phones; bake it into models instead.
+Grain and lighting are all tuning values, so the style can be changed without code. The defaults were dialled in by hand in the tuning panel: soft paper grain with some blotches and relief, a low, dim sun from behind, a strong moon, little sky fill, and ACES tone mapping. Live ambient occlusion was left out because it's too costly on phones; bake it into models instead.
 
 ## 2026-10-22: Paper grain across the whole scene
 
