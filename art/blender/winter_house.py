@@ -19,6 +19,7 @@ ap.add_argument("--out", default="renders/house.png")
 ap.add_argument("--blend", default="")
 ap.add_argument("--export", default="", help="write the house alone as a baked GLB for the web")
 ap.add_argument("--bake-size", type=int, default=1024)
+ap.add_argument("--closeup", action="store_true", help="frame the red house instead of the whole tile")
 args = ap.parse_args(argv)
 DUSK = args.variant == "dusk"
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -184,6 +185,31 @@ def ice_mat():
     L.new(crack.outputs[0], rr.inputs[0]); L.new(rr.outputs[0], b.inputs["Roughness"])
     return m
 
+def brick_mat():
+    """Running-bond bricks on all four chimney faces, laid in object space so courses line up."""
+    m = mat("Brick", (0.45, 0.17, 0.10), rough=0.85)
+    N, L = m.node_tree.nodes, m.node_tree.links
+    tc = N.new("ShaderNodeTexCoord"); sep = N.new("ShaderNodeSeparateXYZ")
+    L.new(tc.outputs["Object"], sep.inputs[0])
+    add = N.new("ShaderNodeMath"); add.operation = "ADD"
+    L.new(sep.outputs[0], add.inputs[0]); L.new(sep.outputs[1], add.inputs[1])
+    co = N.new("ShaderNodeCombineXYZ")
+    L.new(add.outputs[0], co.inputs[0]); L.new(sep.outputs[2], co.inputs[1])
+    br = N.new("ShaderNodeTexBrick")
+    br.offset = 0.5
+    br.inputs["Color1"].default_value = (0.40, 0.14, 0.08, 1)
+    br.inputs["Color2"].default_value = (0.56, 0.24, 0.13, 1)
+    br.inputs["Mortar"].default_value = (0.66, 0.63, 0.58, 1)
+    br.inputs["Scale"].default_value = 1.0
+    br.inputs["Mortar Size"].default_value = 0.008
+    br.inputs["Bias"].default_value = 0.2
+    br.inputs["Brick Width"].default_value = 0.11
+    br.inputs["Row Height"].default_value = 0.05
+    L.new(co.outputs[0], br.inputs["Vector"])
+    L.new(br.outputs["Color"], N["Principled BSDF"].inputs["Base Color"])
+    add_bump(m, br.outputs["Fac"], 0.3, 0.01)
+    return m
+
 WARM = (1.0, 0.48, 0.14)
 GLOW = 9.0 if DUSK else 5.0
 
@@ -212,6 +238,8 @@ M = dict(
     red=mat("SledRed", (0.55, 0.05, 0.04), rough=0.45, coat=0.4),
     wreath=noisy_mat("Wreath", (0.06, 0.18, 0.06), (0.12, 0.28, 0.10), scale=30, bump=0.4),
     smoke=mat("Smoke", (0.80, 0.80, 0.82), rough=1.0),
+    brick=brick_mat(),
+    bush=noisy_mat("Bush", (0.07, 0.16, 0.08), (0.13, 0.25, 0.10), scale=9, rough=0.9, bump=0.3),
 )
 
 # ---------------------------------------------------------------- terrain
@@ -335,9 +363,54 @@ def window(parent, w, h, mullions=True, curtains=True, sill=True, power=None):
             bev=0.025, segs=3, jit=0.01)
     spill_light(parent, w, h, power if power else (45 if DUSK else 10))
 
+def snow_blanket(name, parent, rp, dv, nv, base, t0, t1, Ly, t, seed):
+    """Roof snow as a lumpy blanket: uneven thickness, wavy gable edges, and a soft lip that curls
+    over the eave. Built on a grid in roof space (u down the slope, y along the ridge)."""
+    nu, ny = 9, 14
+    def n(a, b): return noise.noise(Vector((a * 2.1 + seed, b * 2.1, seed * 1.7)))
+    bm = bmesh.new(); top, bot = {}, {}
+    for i in range(nu + 1):
+        for j in range(ny + 1):
+            u, y = lerp(t0, t1, i / nu), lerp(-Ly / 2, Ly / 2, j / ny)
+            if j in (0, ny): y += 0.05 * n(u, y + 9)
+            eave = i == nu
+            if eave: u += 0.02 + 0.04 * (n(u + 5, y) + 1)
+            edge = min(Ly / 2 - abs(y), t1 - u if not eave else 0.0)
+            thick = t * max(0.35, 0.9 + 0.8 * n(u, y)) * lerp(0.4, 1.0, smooth(edge / 0.15))
+            p = rp + dv * u
+            droop = 0.035 * (1.2 + n(u, y + 3)) if eave else 0.0  # the lip sags over the edge
+            lift = base - (0.02 if eave else 0.0)
+            tp, bp = p + nv * (base + thick), p + nv * lift
+            top[i, j] = bm.verts.new((tp.x, y, tp.y - droop))
+            bot[i, j] = bm.verts.new((bp.x, y, bp.y - droop * 0.6))
+    for i in range(nu):
+        for j in range(ny):
+            bm.faces.new((top[i, j], top[i + 1, j], top[i + 1, j + 1], top[i, j + 1]))
+            bm.faces.new((bot[i, j + 1], bot[i + 1, j + 1], bot[i + 1, j], bot[i, j]))
+    ring = [(i, 0) for i in range(nu)] + [(nu, j) for j in range(ny)] + \
+           [(i, ny) for i in range(nu, 0, -1)] + [(0, j) for j in range(ny, 0, -1)]
+    for k in range(len(ring)):
+        a, b = ring[k], ring[(k + 1) % len(ring)]
+        bm.faces.new((top[a], bot[a], bot[b], top[b]))
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return from_bm(name, bm, M["snow_roof"], parent=parent)
+
+def bush(parent, x, y, s):
+    """A low evergreen shrub: a few faceted lumps with snow settled on top."""
+    for k in range(3):
+        a = k * 2.1 + random.uniform(-.4, .4)
+        r = s * random.uniform(0.17, 0.24)
+        blob("Bush", (x + math.cos(a) * s * 0.13, y + math.sin(a) * s * 0.13, r * 0.85), (r, r, r * 0.95),
+             M["bush"], jit=0.22, parent=parent)
+    for k in range(2):  # small drifts caught on top, leaving the green showing
+        a = k * 3.1 + random.uniform(-.5, .5)
+        blob("BushSnow", (x + math.cos(a) * s * 0.07, y + math.sin(a) * s * 0.07, s * (0.37 - 0.05 * k)),
+             (s * 0.13, s * 0.11, s * 0.05), M["snow_roof"], jit=0.25, parent=parent)
+
 FACES = {"front": 0.0, "right": math.pi / 2, "back": math.pi, "left": -math.pi / 2}
 
-def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None, rz=0.0):
+def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None, bushes=(), rz=0.0):
     root = empty(name, loc, rz)
     base = 0.22
     box("Foundation", (0, 0, base / 2), (W + 0.12, D + 0.12, base), M["stone"], root, bev=0.02, jit=0.01)
@@ -351,36 +424,37 @@ def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None
         k2 = (k + 1) % 5
         bm.faces.new((fr[k], fr[k2], bk[k2], bk[k]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    jitter(bm, 0.012)  # nothing hand-built is perfectly square
     from_bm("Walls", bm, wall_m, parent=root)
 
     # white corner boards, a Scandinavian signature
     for sx in (1, -1):
         for sy in (1, -1):
-            box("Corner", (sx * W / 2, sy * D / 2, base + Hw / 2), (0.1, 0.1, Hw), M["trim"], root, bev=0.01)
+            box("Corner", (sx * W / 2, sy * D / 2, base + Hw / 2), (0.1, 0.1, Hw), M["trim"], root, bev=0.01,
+                rot=(random.uniform(-.012, .012), random.uniform(-.012, .012), 0), jit=0.006)
 
     a = math.atan2(rise, W / 2)
     over, gover, tR, tS = 0.28, 0.2, 0.06, 0.07
     L = math.hypot(W / 2, rise) + over
     Ly = D + 2 * gover
     rp = Vector((0, ridge))
-    # Simple paper-model roof: a thin dark board with an even, crisp layer of snow on top. Each layer
-    # runs past the ridge just far enough for the two sides to meet in a clean peak.
+    # A thin dark board under a lumpy blanket of snow. Both run past the ridge far enough for the two
+    # sides to meet in a peak.
     for s in (1, -1):
         dv = Vector((s * math.cos(a), -math.sin(a)))
         nv = Vector((s * math.sin(a), math.cos(a)))
         t0, t1 = -tR * math.tan(a), L
         c = rp + dv * ((t0 + t1) / 2) + nv * (tR / 2)
         box("Roof", (c.x, 0, c.y), (t1 - t0, Ly, tR), M["roof"], root, rot=(0, s * a, 0), bev=0.006, segs=1)
-        t0, t1 = -(tR + tS) * math.tan(a), L - 0.04  # inset at the eave so the dark edge shows
-        c = rp + dv * ((t0 + t1) / 2) + nv * (tR + tS / 2)
-        box("RoofSnow", (c.x, 0, c.y), (t1 - t0, Ly - 0.05, tS), M["snow_roof"], root,
-            rot=(0, s * a, 0), bev=0.012, segs=1)
+        snow_blanket("RoofSnow", root, rp, dv, nv, tR, -(tR + 0.1) * math.tan(a), L - 0.05, Ly - 0.04,
+                     0.1, seed=3.0 + s * 7.0)
 
     for face, u, z, w, h, kw in windows:
         dist = D / 2 if face in ("front", "back") else W / 2
         r = FACES[face]
         g = empty("Win", (math.sin(r) * dist + math.cos(r) * u, -math.cos(r) * dist + math.sin(r) * u, z),
                   r, root)
+        g.rotation_euler.y = random.uniform(-0.02, 0.02)  # frames set by hand, slightly off level
         window(g, w, h, **kw)
 
     if door:
@@ -413,13 +487,17 @@ def house(name, loc, W, D, Hw, rise, wall_m, windows=(), door=None, chimney=None
         cx, cy = chimney
         roof_z = ridge - abs(cx) * math.tan(a)
         h0, h1 = roof_z - 0.1, ridge + 0.5
-        box("Chimney", (cx, cy, (h0 + h1) / 2), (0.3, 0.3, h1 - h0), M["stone"], root, bev=0.015, jit=0.008)
-        box("ChimneyCap", (cx, cy, h1 + 0.02), (0.36, 0.36, 0.05), M["stone"], root, bev=0.01)
-        box("ChimneySnow", (cx, cy, h1 + 0.08), (0.34, 0.34, 0.09), M["snow_roof"], root, bev=0.04, segs=3, jit=0.01)
+        lean = (random.uniform(-.03, .03), random.uniform(-.03, .03), 0.05)
+        box("Chimney", (cx, cy, (h0 + h1) / 2), (0.3, 0.3, h1 - h0), M["brick"], root, rot=lean, bev=0.012, jit=0.01)
+        box("ChimneyCap", (cx, cy, h1 + 0.02), (0.37, 0.37, 0.06), M["stone"], root, rot=lean, bev=0.01, jit=0.012)
+        blob("ChimneySnow", (cx, cy, h1 + 0.07), (0.2, 0.2, 0.06), M["snow_roof"], jit=0.15, parent=root, rz=0.05)
         for k in range(4):
             t = k / 3
             blob("Smoke", (cx + 0.15 * k + 0.05, cy - 0.05 * k, h1 + 0.35 + 0.42 * k),
                  (0.08 + 0.05 * k,) * 3, M["smoke"], jit=0.2, parent=root)
+
+    for x, y, sz in bushes:
+        bush(root, x, y, sz)
     return root
 
 def add_point(parent, loc, power):
@@ -434,7 +512,9 @@ house("House", (hx, hy, hz), W=2.0, D=2.6, Hw=1.25, rise=1.15, wall_m=M["falu"],
                ("front", 0.0, 2.05, 0.3, 0.36, {"curtains": False}),
                ("right", -0.6, 0.22 + 0.72, 0.5, 0.6, {}),
                ("right", 0.6, 0.22 + 0.72, 0.5, 0.6, {})],
-      door=(-0.45, 0.5, 0.92), chimney=(0.5, 0.55))
+      door=(-0.45, 0.5, 0.92), chimney=(0.5, 0.55),
+      bushes=[(0.3, -1.52, 1.0), (0.78, -1.48, 0.75), (-0.98, -1.47, 0.85), (1.22, 0.02, 0.95),
+              (1.2, 1.08, 0.7), (-1.17, 1.45, 0.8)])
 
 sx_, sy_, _, _, sz_ = FLAT[1]
 house("Shed", (sx_, sy_, sz_), W=1.3, D=1.5, Hw=0.85, rise=0.8, wall_m=M["ochre"],
@@ -595,7 +675,9 @@ cam_d = bpy.data.cameras.new("Cam"); cam_d.type = "ORTHO"; cam_d.ortho_scale = 1
 cam = link(bpy.data.objects.new("Cam", cam_d))
 cam.rotation_euler = (math.radians(60), 0, math.radians(45))
 look = Vector((0, 0, -1)); look.rotate(cam.rotation_euler)
-cam.location = Vector((0, 0, 0.4)) - look * 40
+target = Vector((FLAT[0][0], FLAT[0][1], 1.3)) if args.closeup else Vector((0, 0, 0.4))
+if args.closeup: cam_d.ortho_scale = 5.2
+cam.location = target - look * 40
 cam_d.clip_end = 100
 scene.camera = cam
 
@@ -626,8 +708,8 @@ vs.exposure = 0.0 if DUSK else -0.2
 # ---------------------------------------------------------------- web export
 
 # Materials that stay live in the browser as emissive colour; everything else is baked into one texture.
-GLOW_MATS = {"WindowGlow": ("Glow", WARM, 1.0), "LampGlow": ("Glow", WARM, 1.0),
-             "Curtain": ("GlowSoft", (1.0, 0.72, 0.42), 0.55)}
+GLOW_MATS = {"WindowGlow": ("Glow", WARM, 2.4), "LampGlow": ("Glow", WARM, 2.4),
+             "Curtain": ("GlowSoft", (1.0, 0.72, 0.42), 1.1)}
 SKIP = ("Smoke",)  # static smoke puffs read as rocks in a live scene
 
 def descendants(ob):
@@ -675,15 +757,21 @@ def export_house(path):
     root.location = (0, 0, 0)  # origin at the foundation's base, centred
     bpy.context.view_layer.update()
     dg = bpy.context.evaluated_depsgraph_get()
-    body, glow = [], []
+    body, glow, halos = [], [], []
     for ob in keep:
         if ob.type != "MESH" or ob.name.startswith(SKIP): continue
+        # Mark each pane with an empty sized to it; the browser hangs a soft glow halo on these.
+        if ob.name.startswith(("Glass", "LanternGlass")):
+            h = bpy.data.objects.new("Halo", None)
+            h.matrix_world = ob.matrix_world
+            h.scale = (ob.dimensions.x, 1.0, ob.dimensions.z)
+            halos.append(link(h))
         me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))  # bevels applied
         me.transform(ob.matrix_world)
         copy = link(bpy.data.objects.new(ob.name, me))
         (glow if me.materials[0].name in GLOW_MATS else body).append(copy)
     for ob in list(scene.objects):
-        if ob not in body and ob not in glow: bpy.data.objects.remove(ob)
+        if ob not in body and ob not in glow and ob not in halos: bpy.data.objects.remove(ob)
 
     body = join("HouseBody", body)
     bpy.context.view_layer.objects.active = body
@@ -726,7 +814,7 @@ def export_house(path):
         p.material_index = order.index(GLOW_MATS[old[p.material_index]][0])
 
     tris = sum(len(p.vertices) - 2 for o in (body, glow) for p in o.data.polygons)
-    print(f"EXPORT triangles={tris} materials={1 + len(order)}")
+    print(f"EXPORT triangles={tris} materials={1 + len(order)} halos={len(halos)}")
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_apply=True,
                               export_image_format="JPEG", export_jpeg_quality=88,
                               export_yup=True, export_lights=False, export_cameras=False)
