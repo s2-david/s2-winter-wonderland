@@ -17,6 +17,7 @@ ap.add_argument("--samples", type=int, default=128)
 ap.add_argument("--res", type=int, nargs=2, default=[1200, 1500])
 ap.add_argument("--out", default="renders/snowman.png")
 ap.add_argument("--blend", default="", help="also save the scene for hand editing")
+ap.add_argument("--export", default="", help="write the snowman as a GLB for the game")
 args = ap.parse_args(argv)
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -56,14 +57,17 @@ def group(name, parent=None, pos=(0, 0, 0), rot=(0, 0, 0), scale=1.0):
 
 CARD = None  # the one matte card material, set up below
 
-def card(name, bm, color, spread, parent, pos=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1), tones=None):
-    """Flat-shaded mesh where each facet takes a slightly different tone of `color` (or of `tones`)."""
+def card(name, bm, color, spread, parent, pos=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1), tones=None, light=None):
+    """Flat-shaded mesh where each facet takes a slightly different tone of `color` (or of `tones`).
+    `light`, given a corner's position, darkens it to bake in occlusion."""
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     attr = me.color_attributes.new("tone", "FLOAT_COLOR", "CORNER")
+    me.color_attributes.active_color = attr
     for p in me.polygons:
         c = shifted(random.choice(tones) if tones else color, spread)
         for li in p.loop_indices:
-            attr.data[li].color = (*c, 1)
+            k = light(me.vertices[me.loops[li].vertex_index].co) if light else 1.0
+            attr.data[li].color = (*(x * k for x in c), 1)
     me.materials.append(CARD)
     ob = link(bpy.data.objects.new(name, me), parent)
     ob.location = pos; ob.rotation_euler = rot; ob.scale = scale
@@ -188,8 +192,24 @@ body_y = BODY * SQUASH * -BASE - 0.005
 head_y = body_y + NECK + HEAD
 body = group("Body", root, (0, body_y, 0))
 head = group("Head", root, (0, head_y, 0))
-body_mesh = card("BodySnow", snowball(BODY, body_shape), None, 0.015, body, scale=(1, SQUASH, 1), tones=SNOW_TONES)
-card("HeadSnow", snowball(HEAD), None, 0.015, head, tones=SNOW_TONES)
+
+# Soft occlusion baked into the snow: darker in the crease where the head sits in the body and where
+# the body meets the ground. Each takes a point in the snowman's own space; 1 is fully open.
+def smoothstep(x, lo, hi):
+    t = max(0.0, min(1.0, (x - lo) / (hi - lo))); return t * t * (3 - 2 * t)
+near_head = lambda p: smoothstep((p - Vector((0, head_y, 0))).length - HEAD, 0, 0.12)
+def near_body(p):
+    y = (p.y - body_y) / SQUASH; w = bell_width(y / BODY)
+    return smoothstep(Vector((p.x / w, y, p.z / w)).length - BODY, 0, 0.1)
+def shaded(open_, y0, squash):
+    def light(v):
+        p = Vector((v.x, v.y * squash + y0, v.z))
+        return 1 - 0.35 * (1 - open_(p)) - 0.3 * (1 - smoothstep(p.y, 0, 0.1))
+    return light
+
+body_mesh = card("BodySnow", snowball(BODY, body_shape), None, 0.015, body, scale=(1, SQUASH, 1), tones=SNOW_TONES,
+                 light=shaded(near_head, body_y, SQUASH))
+card("HeadSnow", snowball(HEAD), None, 0.015, head, tones=SNOW_TONES, light=shaded(near_body, head_y, 1))
 
 # The face and hat are laid out for a head of radius 0.2 and scaled to fit.
 face = group("Face", head, scale=HEAD / 0.2)
@@ -201,23 +221,32 @@ def coal_lump(radius):
     return bm
 
 EYE_X, EYE_Y, CHEEK_X, CHEEK_Y = 0.078, 0.045, 0.115, -0.01
-for side in (-1, 1):
-    card("Eye", coal_lump(0.02), COAL, 0.08, face, (side * EYE_X, EYE_Y, on_head(EYE_X, EYE_Y) + 0.004),
+# Parts the game animates get fixed names: Eye0/Eye1, Cheek0/Cheek1 and Arm0/Arm1, left to right.
+for i, side in enumerate((-1, 1)):
+    card(f"Eye{i}", coal_lump(0.02), COAL, 0.08, face, (side * EYE_X, EYE_Y, on_head(EYE_X, EYE_Y) + 0.004),
          (0, side * math.asin(EYE_X / 0.2), 0), (1, 1, 0.65))
     # Three's CircleGeometry is a flat hexagon facing +Z.
     bm = bmesh.new(); bmesh.ops.create_circle(bm, cap_ends=True, segments=6, radius=0.022)
-    card("Cheek", bm, CHEEK, 0.04, face, (side * CHEEK_X, CHEEK_Y, on_head(CHEEK_X, CHEEK_Y) + 0.006),
+    card(f"Cheek{i}", bm, CHEEK, 0.04, face, (side * CHEEK_X, CHEEK_Y, on_head(CHEEK_X, CHEEK_Y) + 0.006),
          (0, side * math.asin(CHEEK_X / 0.2), 0))
 
-# The gentle smile (player.js morphs it deeper when the snowman beams).
-SMILE_HALF, SMILE_BOTTOM, SMILE_R, SMILE_SEGS = 0.075, -0.085, 0.11, 5
-half = math.asin(SMILE_HALF / SMILE_R)
-smile = []
-for i in range(SMILE_SEGS + 1):
-    a = (i / SMILE_SEGS * 2 - 1) * half
-    x, y = SMILE_R * math.sin(a), SMILE_BOTTOM + SMILE_R * (1 - math.cos(a))
-    smile.append((x, y, on_head(x, y) + 0.006))
-card("Smile", tube(smile, 0.009), COAL, 0.05, face)
+# One continuous coal smile along a broad upward curve. Its "Beam" shape key is a deeper curve of the
+# same width, which the game blends in when the snowman beams.
+SMILE_HALF, SMILE_BOTTOM, SMILE_SEGS = 0.075, -0.085, 5
+SMILE_GENTLE, SMILE_BEAMING = 0.11, 0.08
+def smile_strip(radius):
+    half = math.asin(SMILE_HALF / radius); pts = []
+    for i in range(SMILE_SEGS + 1):
+        a = (i / SMILE_SEGS * 2 - 1) * half
+        x, y = radius * math.sin(a), SMILE_BOTTOM + radius * (1 - math.cos(a))
+        pts.append((x, y, on_head(x, y) + 0.006))
+    return tube(pts, 0.009)
+smile = card("Smile", smile_strip(SMILE_GENTLE), COAL, 0.05, face)
+smile.shape_key_add(name="Basis")
+beam = smile.shape_key_add(name="Beam")
+bm = smile_strip(SMILE_BEAMING)
+for k, v in zip(beam.data, bm.verts): k.co = v.co
+bm.free()
 
 NOSE_LEN, NOSE_TURN = 0.17, 0.25
 nose_pos = Vector((math.sin(NOSE_TURN), 0, math.cos(NOSE_TURN))) * (NOSE_LEN / 2) + Vector((0, 0, 0.192))
@@ -243,8 +272,8 @@ for y in (0.24, 0.09, -0.06):
     b.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(n)
 
 # Stick arms that reach up and out, forking into twigs near the top.
-for side in (-1, 1):
-    arm = group("Arm", body, (side * 0.28, 0.19, 0), (0, 0, -side * 0.62))
+for i, side in enumerate((-1, 1)):
+    arm = group(f"Arm{i}", body, (side * 0.28, 0.19, 0), (0, 0, -side * 0.62))
     card("Stick", cylinder(0.016, 0.024, 0.36, 5, y0=0), WOOD, 0.08, arm)
     for y, bend in ((0.24, 0.7), (0.3, -0.55)):
         card("Twig", cylinder(0.009, 0.014, 0.11, 4, y0=0), WOOD, 0.08, arm, (0, y, 0), (0, 0, side * bend))
@@ -309,5 +338,21 @@ vs.exposure = -0.1
 
 if args.blend:
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, args.blend))
+
+if args.export:
+    # Only the snowman goes in, with the root left unturned and no axis conversion, so the GLB is in
+    # player.js's own Y-up space. Colours travel as vertex colours; the game gives every part one
+    # shared matte card material, so none are written. No Draco: it's small, and it keeps the smile's
+    # shape key simple to load.
+    root.rotation_euler = (0, 0, 0)
+    bpy.ops.object.select_all(action="DESELECT")
+    stack = [root]
+    while stack:
+        ob = stack.pop(); ob.select_set(True); stack += ob.children
+    bpy.ops.export_scene.gltf(filepath=os.path.join(HERE, args.export), export_format="GLB", use_selection=True,
+                              export_yup=False, export_materials="NONE", export_colors=True, export_morph=True,
+                              export_morph_normal=False, export_cameras=False, export_lights=False)
+    sys.exit(0)
+
 if args.out:
     bpy.ops.render.render(write_still=True)

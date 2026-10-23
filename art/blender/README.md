@@ -35,3 +35,25 @@ Every design goes into one GLB, built to be cheap in the browser:
 The four designs total about 30,000 triangles in a ~770 kB GLB. `src/world/houses.js` draws every copy of a design with instancing, so the whole village costs about 17 draw calls however many houses stand on the planet. `src/world/village.js` lists the houses: design, wall colour, how lit the windows are, and position.
 
 Baked occlusion is fine because the planet rotates under a fixed sun: directional shadows still come from the live sun. Don't bake the sun into the texture.
+
+## The snowman
+
+`snowman.py` builds the papercraft snowman explorer. It's authored in the game's own Y-up units (the numbers once lived in `src/player.js`), and renders a preview:
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender -b -P snowman.py -- \
+    --samples 128 --out renders/snowman.png --blend snowman.blend
+```
+
+Export it for the game with:
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender -b -P snowman.py -- \
+    --export ../../src/world/models/snowman.glb
+```
+
+It's exported differently from the houses, because it's small (about 100 kB) and animated:
+
+- No texture: each facet's tone and the soft occlusion (in the neck crease and at the base) are baked into vertex colours. `player.js` gives every part one shared matte card material.
+- No Draco, which keeps the smile's shape key simple to load.
+- `src/player.js` animates the parts by name, so keep these names: `Body`, `Head`, `Arm0`/`Arm1`, `Eye0`/`Eye1`, `Cheek0`/`Cheek1`, and `Smile` with its `Beam` shape key (the deeper smile when the snowman beams).
