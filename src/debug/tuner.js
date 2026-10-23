@@ -4,7 +4,7 @@ import { tuning } from '../config.js';
 const controls = [
   { heading: 'Explorer and snow' },
   { key: 'walkSpeed', label: 'Walk speed', min: 0.2, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
-  { key: 'turnSpeed', label: 'Turn speed', min: 0.1, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
+  { key: 'turnSpeed', label: 'Turn speed', min: 0.1, max: 8, step: 0.01, format: v => `${v.toFixed(2)}×` },
   { key: 'heroScale', label: 'Hero size', min: 0.2, max: 1.2, step: 0.01, format: v => `${v.toFixed(2)}×` },
   { key: 'snowDensity', label: 'Snow density', min: 0, max: 100, step: 1, format: v => `${v}%` },
   { key: 'snowSize', label: 'Snow size', min: 0.03, max: 0.24, step: 0.005, format: v => v.toFixed(3) },

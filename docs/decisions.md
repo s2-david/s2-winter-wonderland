@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-23: Cobblestone road, laid on the snow's slope
+
+The road's stepping-stone dots became about 330 cobblestones in staggered rows, thinning out at the ends and edges. They are one instanced flat-shaded stone (one draw call, about 12k triangles), each tinted, sized and turned on its own through a new `color` option on `instanced()`. Cobbles go down with `placeOnSnow()` in `planet.js`, which tilts each one to the snow surface under it and sinks it slightly; `place()` stands objects straight out from the planet's centre, which left one edge of a flat stone hanging off a drift's side. Turn speed now defaults to 5.5 (the tuning slider goes up to 8).
+
 ## 2026-10-23: Pillowy snow instead of a faceted planet
 
 The ground is a finely divided sphere with smooth shading, raised into soft drifts: about 70 broad mounds with 220 smaller ones on top, seeded so the planet is the same on every visit. `snowHeight()` in `src/world/planet.js` gives the height anywhere, so the explorer rides over the drifts, and landmarks are still raycast onto the real surface. The faint faceted ice shell was removed because the drifts would poke through it. The ground went from under 1k to about 20k triangles, one draw call, which is the price of round drifts.
@@ -32,7 +36,7 @@ Trees come in four shapes (`fir`, `spruce` tall and narrow, `bush` short and wid
 
 ## 2026-10-22: Repeated props are instanced behind placeable anchors
 
-Trees and path dots are drawn with one `InstancedMesh` per part (6 for trees, 1 for path dots) instead of one mesh per part per tree, which took the wide planet view from about 280 draw calls to 55. `makeTree()` and `makePathDot()` still return an object that `place()` / `placeBlocked()` position, so village code and collision blockers did not change: the object is an empty anchor whose pose is copied into the instances when it is added to the world. Each instanced mesh is culled as a whole, so off-screen trees now cost triangles in the close view (about 15k instead of 12k), which is well inside the budget. Anchors are placed once; moving or removing one later does not update its instances.
+Trees and path dots (now cobblestones) are drawn with one `InstancedMesh` per part (6 for trees, 1 for path dots) instead of one mesh per part per tree, which took the wide planet view from about 280 draw calls to 55. `makeTree()` and `makePathDot()` still return an object that `place()` / `placeBlocked()` position, so village code and collision blockers did not change: the object is an empty anchor whose pose is copied into the instances when it is added to the world. Each instanced mesh is culled as a whole, so off-screen trees now cost triangles in the close view (about 15k instead of 12k), which is well inside the budget. Anchors are placed once; moving or removing one later does not update its instances.
 
 ## 2026-10-22: Blender models are scripted and baked for the web
 
