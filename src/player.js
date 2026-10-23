@@ -11,7 +11,9 @@ hero.rotation.x = Math.PI / 2;
 const avatar = new THREE.Group();
 hero.add(avatar);
 
-// The explorer is a snowman: three stacked snowballs, coal eyes, a carrot nose and stick arms.
+// The explorer is a snowman styled like a soft vinyl toy: smooth satin snowballs, a big head, glossy
+// coal eyes, blush cheeks, a carrot nose, stick arms and a ribbed knit beanie and scarf.
+
 // Painted once on a small canvas and shared by every snowball: soft blue-grey hollows and bright flecks
 // read as packed snow without loading an image.
 function snowTexture() {
@@ -41,69 +43,120 @@ function snowTexture() {
   return texture;
 }
 
-const snowMap = snowTexture();
-const snow = new THREE.MeshStandardMaterial({ map: snowMap, bumpMap: snowMap, bumpScale: 1, roughness: 0.9 });
-const coal = new THREE.MeshStandardMaterial({ color: '#23232b', flatShading: true });
-const wood = new THREE.MeshStandardMaterial({ color: '#5f3b25', flatShading: true });
+// Fine vertical ribs, used as both colour and bump, make the beanie and scarf read as soft knit.
+function knitTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#7b9bd0';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (let x = 0; x < canvas.width; x += 4) {
+    const rib = ctx.createLinearGradient(x, 0, x + 4, 0);
+    rib.addColorStop(0, 'rgba(59, 85, 124, 0.45)');
+    rib.addColorStop(0.5, 'rgba(255, 255, 255, 0.12)');
+    rib.addColorStop(1, 'rgba(59, 85, 124, 0.45)');
+    ctx.fillStyle = rib;
+    ctx.fillRect(x, 0, 4, canvas.height);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
 
-// Each snowball is its own group so it can sway separately; the face and arms ride along with theirs.
-const snowballs = [[0.24, 0.22], [0.18, 0.56], [0.14, 0.82]].map(([radius, y]) => {
+// Smooth shading and a satin finish give the soft vinyl-toy look; the snow texture stays as gentle colour only.
+const snow = new THREE.MeshStandardMaterial({ map: snowTexture(), roughness: 0.55 });
+const coal = new THREE.MeshStandardMaterial({ color: '#23232b', roughness: 0.2 });
+const shine = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+const blush = new THREE.MeshStandardMaterial({ color: '#b7ddff', roughness: 0.6 });
+const wood = new THREE.MeshStandardMaterial({ color: '#5f3b25', roughness: 0.7 });
+const knitMap = knitTexture();
+const knit = new THREE.MeshStandardMaterial({ map: knitMap, bumpMap: knitMap, bumpScale: 2, roughness: 0.85 });
+const cuffMap = knitMap.clone();
+cuffMap.repeat.set(4, 1);
+const cuffKnit = new THREE.MeshStandardMaterial({ map: cuffMap, bumpMap: cuffMap, bumpScale: 2, roughness: 0.85 });
+
+// A big, fat bottom snowball (squashed a little so it sits heavy), a big-to-medium middle and a
+// medium head. Each snowball is its own group so it can sway separately; the face and arms ride along.
+const HEAD = 0.17;
+const snowballs = [[0.3, 0.27, 0.92], [0.22, 0.706, 1], [HEAD, 1.046, 1]].map(([radius, y, squash]) => {
   const ball = new THREE.Group();
   ball.position.y = y;
-  ball.add(new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 12), snow));
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 24), snow);
+  mesh.scale.y = squash;
+  ball.add(mesh);
   avatar.add(ball);
   return ball;
 });
 const [, middle, head] = snowballs;
 
-const eyeGeometry = new THREE.SphereGeometry(0.026, 6, 4);
-for (const x of [-0.05, 0.05]) {
+// The face and beanie are laid out for a head of radius 0.2 and scaled as one piece to fit the real head.
+const face = new THREE.Group();
+face.scale.setScalar(HEAD / 0.2);
+head.add(face);
+
+// Big glossy oval eyes, angled to follow the curve of the head, each with a small white highlight.
+// The beanie's cuff sits just over their tops for a sleepy, deadpan look.
+const eyeGeometry = new THREE.SphereGeometry(0.04, 16, 12);
+const shineGeometry = new THREE.SphereGeometry(0.011, 8, 6);
+const blushGeometry = new THREE.SphereGeometry(0.032, 16, 8);
+for (const side of [-1, 1]) {
   const eye = new THREE.Mesh(eyeGeometry, coal);
-  eye.position.set(x, 0.03, 0.125);
-  head.add(eye);
+  eye.scale.set(1, 1.25, 0.45);
+  eye.position.set(side * 0.075, -0.005, 0.178);
+  eye.rotation.y = side * 0.38;
+  const highlight = new THREE.Mesh(shineGeometry, shine);
+  highlight.position.set(side * 0.075 + 0.014, 0.018, 0.197);
+  const cheek = new THREE.Mesh(blushGeometry, blush);
+  cheek.scale.set(1, 1, 0.2);
+  cheek.position.set(side * 0.12, -0.055, 0.148);
+  cheek.rotation.y = side * 0.68;
+  face.add(eye, highlight, cheek);
 }
 
-const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 6), new THREE.MeshStandardMaterial({ color: '#d68c58', flatShading: true }));
+const nose = new THREE.Mesh(new THREE.ConeGeometry(0.032, 0.12, 16), new THREE.MeshStandardMaterial({ color: '#d68c58', roughness: 0.5 }));
 nose.rotation.x = Math.PI / 2;
-nose.position.set(0, -0.01, 0.2);
-head.add(nose);
+nose.position.set(0, -0.04, 0.25);
+face.add(nose);
 
-// A blue knit beanie: a tall dome over the top of the head, a darker folded band and a snowy pom-pom.
-const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#7b9bd0', flatShading: true }));
+// A slouchy ribbed beanie: a low dome, a chunky rolled cuff and a snowy pom-pom.
+const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.208, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), knit);
 beanie.position.y = 0.07;
-beanie.scale.y = 1.15;
-const band = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.045, 16), new THREE.MeshStandardMaterial({ color: '#3b557c', flatShading: true }));
-band.position.y = 0.075;
-const pompom = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), snow);
-pompom.position.y = 0.25;
-head.add(beanie, band, pompom);
+beanie.scale.y = 0.9;
+const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.042, 12, 40), cuffKnit);
+cuff.rotation.x = Math.PI / 2;
+cuff.position.y = 0.08;
+const pompom = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), snow);
+pompom.position.y = 0.29;
+face.add(beanie, cuff, pompom);
 
 // Each arm pivots at the shoulder, so the geometry starts at its base rather than its middle.
-const stickGeometry = new THREE.CylinderGeometry(0.012, 0.018, 0.34, 5).translate(0, 0.17, 0);
-const twigGeometry = new THREE.CylinderGeometry(0.008, 0.012, 0.12, 4).translate(0, 0.06, 0);
+const stickGeometry = new THREE.CylinderGeometry(0.016, 0.022, 0.34, 8).translate(0, 0.17, 0);
+const twigGeometry = new THREE.CylinderGeometry(0.01, 0.014, 0.11, 6).translate(0, 0.055, 0);
 const arms = [-1, 1].map((side) => {
   const arm = new THREE.Group();
-  arm.position.set(side * 0.15, 0.04, 0);
+  arm.position.set(side * 0.19, 0.04, 0);
   arm.rotation.z = -side * 1.05;
   const twig = new THREE.Mesh(twigGeometry, wood);
-  twig.position.y = 0.22;
+  twig.position.y = 0.23;
   twig.rotation.z = side * 0.7;
   arm.add(new THREE.Mesh(stickGeometry, wood), twig);
   middle.add(arm);
   return arm;
 });
 
-// The scarf matches the beanie and wraps the neck where the head meets the middle snowball. Its knot
-// and tail sit at the front, marking the explorer's fixed, forward-facing heading.
-const scarfMaterial = new THREE.MeshStandardMaterial({ color: '#7b9bd0', flatShading: true });
-const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 6, 16), scarfMaterial);
+// A puffy knit scarf matches the beanie and wraps the neck where the head meets the middle snowball.
+// Its knot and tail sit at the front, marking the explorer's fixed, forward-facing heading.
+const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.045, 12, 32), cuffKnit);
 wrap.rotation.x = Math.PI / 2;
-wrap.position.y = 0.15;
-const knot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), scarfMaterial);
-knot.position.set(0, 0.14, 0.13);
-const tail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.17, 0.02), scarfMaterial);
-tail.position.set(0.03, 0.05, 0.18);
-tail.rotation.set(-0.25, 0, 0.2);
+wrap.position.y = 0.19;
+const knot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), knit);
+knot.position.set(0.04, 0.17, 0.15);
+const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.028, 0.12, 4, 12), knit);
+tail.scale.z = 0.5;
+tail.position.set(0.05, 0.08, 0.215);
+tail.rotation.set(-0.3, 0, 0.15);
 middle.add(wrap, knot, tail);
 
 export function applyHeroTuning() {

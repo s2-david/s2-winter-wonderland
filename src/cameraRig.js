@@ -39,7 +39,7 @@ export function toggleView() {
   targetZoom = targetZoom > 25 ? ZOOM.close : ZOOM.wide;
 }
 
-const closePos = new THREE.Vector3(0, 4.5, 12.2), closeFocus = new THREE.Vector3(0, -2, 9.8), planetCenter = new THREE.Vector3();
+const closePos = new THREE.Vector3(0, 3.3, 11.5), closeFocus = new THREE.Vector3(0, -1.6, 9.9), planetCenter = new THREE.Vector3();
 const widePos = new THREE.Vector3(), focus = new THREE.Vector3();
 
 export function updateCamera() {
