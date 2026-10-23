@@ -2,8 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { R } from '../config.js';
-import { world, placeBlocked } from './planet.js';
+import { world, placeBlocked, point } from './planet.js';
 import { addGrain } from '../grain.js';
 import housesUrl from './models/houses.glb?url';
 
@@ -59,16 +58,17 @@ function haloGeometry(model, design) {
   return planes.length ? mergeGeometries(planes) : null;
 }
 
-// houses: [{ design, wall: '#hex', light: 0 (dark) … 1 (lit), lat, lon }]
+// houses: [{ design, wall: '#hex', light: 0 (dark) … 1 (lit), lat, lon, facing? }]
+// The front door faces the starting plaza unless `facing` gives another [lat, lon] to face.
 export function placeHouses(houses) {
   // Collision anchors go down now, so the explorer can't walk through a house that's still loading.
   const scale = new THREE.Matrix4().makeScale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
   const spots = houses.map(house => {
     const anchor = new THREE.Object3D();
     placeBlocked(anchor, house.lat, house.lon, 0.02, DESIGNS[house.design].radius);
-    // Turn the front door toward the starting plaza (the top of the planet, +Z).
-    const toStart = new THREE.Vector3(0, 0, R).sub(anchor.position).applyQuaternion(anchor.quaternion.clone().invert());
-    anchor.rotateY(Math.atan2(toStart.x, toStart.z));
+    const [faceLat, faceLon] = house.facing ?? [0, 0];
+    const toward = point(faceLat, faceLon).sub(anchor.position).applyQuaternion(anchor.quaternion.clone().invert());
+    anchor.rotateY(Math.atan2(toward.x, toward.z));
     anchor.updateMatrix();
     return { ...house, base: anchor.matrix.clone(), matrix: anchor.matrix.clone().multiply(scale) };
   });
