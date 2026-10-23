@@ -18,7 +18,7 @@ world.add(ice);
 // Objects the explorer collides with: { obj, radius }.
 export const blockers = [];
 
-function point(lat, lon, extra = 0) {
+export function point(lat, lon, extra = 0) {
   const a = THREE.MathUtils.degToRad(lat), b = THREE.MathUtils.degToRad(lon);
   const r = R + extra;
   return new THREE.Vector3(r * Math.cos(a) * Math.sin(b), r * Math.sin(a), r * Math.cos(a) * Math.cos(b));

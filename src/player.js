@@ -5,7 +5,7 @@ import { moveIntent } from './input.js';
 
 // Explorer stays planted and always faces the forward screen direction while the planet moves underneath.
 export const hero = new THREE.Group();
-hero.position.set(0, 0, R + tuning.heroHeight);
+hero.position.set(0, 0, R);
 hero.rotation.x = Math.PI / 2;
 
 const avatar = new THREE.Group();
@@ -161,7 +161,6 @@ middle.add(wrap, knot, tail);
 
 export function applyHeroTuning() {
   avatar.scale.setScalar(tuning.heroScale);
-  hero.position.z = R + tuning.heroHeight;
 }
 
 function wouldHitBlocker() {

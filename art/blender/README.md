@@ -1,0 +1,37 @@
+# Blender art
+
+`winter_house.py` builds the low-poly winter diorama entirely from code (Blender 5.2), so the look can be tuned in text and reviewed in PRs. Shapes are deliberately a little irregular (lumpy roof snow, slightly off-square walls and frames, a leaning brick chimney) so the house reads as hand-made rather than machine-perfect. Snow is smooth-shaded (`soft()`) so drifts look rounded, while walls and trim keep their crisp flat facets. Renders and `.blend` files are output and are not committed.
+
+## Render the diorama
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender -b -P winter_house.py -- \
+    --variant dusk --samples 192 --res 1600 1200 --out renders/winter_house_dusk.png
+```
+
+`--variant` is `dusk` (blue hour, window glow) or `day` (golden afternoon). Add `--closeup` to frame the red house instead of the whole tile, `--lineup` to render every house design side by side, and `--blend name.blend` to also save the scene for hand editing.
+
+## House designs
+
+`DESIGNS` in `winter_house.py` holds one recipe per house design for `house()`: size, roof pitch, windows, door, chimney or stovepipe, porch, lean-to, shutters and bushes. There are four: **Cottage** (the red Scandinavian house), **Townhouse** (tall, two storeys, shutters), **Cabin** (long and low, porch) and **Aframe** (steep roof, lean-to woodshed). To add one, add a recipe, check it with `--lineup`, re-export, then give it a collision radius in `src/world/houses.js`.
+
+## Export the houses for the planet
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender -b -P winter_house.py -- \
+    --export ../../src/world/models/houses.glb
+```
+
+Every design goes into one GLB, built to be cheap in the browser:
+
+- Each design is merged into a few meshes with bevels applied: `<Design>_Body`, `<Design>_Walls` and `<Design>_Glow`. Smoke puffs and lights are dropped.
+- The procedural materials (board siding, brick chimney, stone, snow, bushes, wreath) and ambient occlusion of all designs are baked by Cycles into **one shared 2048² texture** (`--bake-size` to change).
+- Walls are baked near-white so the browser can tint them per house. That's how one design comes in several colours.
+- No paper texture is baked in: the planet-wide grain shader (`src/grain.js`) adds it at runtime, so the houses match everything else.
+- Windows, curtains and lanterns are two emissive materials. Their glow comes from colour, not from lights, and the browser dims them per house for houses with nobody home.
+- Each pane is marked with an empty named `Halo_<Design>`, scaled to the pane. The browser hangs a soft additive glow on these.
+- Meshes are Draco-compressed and the texture is WebP. The Draco decoder lives in `public/draco/` (copied from `three/examples/jsm/libs/draco/gltf/`).
+
+The four designs total about 30,000 triangles in a ~770 kB GLB. `src/world/houses.js` draws every copy of a design with instancing, so the whole village costs about 17 draw calls however many houses stand on the planet. `src/world/village.js` lists the houses: design, wall colour, how lit the windows are, and position.
+
+Baked occlusion is fine because the planet rotates under a fixed sun: directional shadows still come from the live sun. Don't bake the sun into the texture.

@@ -39,6 +39,10 @@ Vanilla Three.js (pinned to `0.161.0`) bundled with Vite. No UI framework. See t
 - Input: keyboard and the on-screen joystick both feed `moveIntent()` in `src/input.js`. Arrow keys move; E is the action key; Z toggles zoom. WASD is intentionally not supported.
 - Tunable values live in `tuning` in `src/config.js`. The tuning panel (`src/debug/tuner.js`) shows for everyone while `SHOW_TUNER` is `true`; otherwise only with `?debug`. Its "Copy values" button produces JSON to paste back into `tuning` as new defaults.
 - Touch UI: `body.touch` is set on touch devices (`src/ui/touch.js`). Use `.touch-only` / `.keys-only` for content that differs between phone and desktop.
+- Every lit `MeshStandardMaterial` gets a paper grain from `src/grain.js` (the `grain*` values in `tuning`). Sun, sky fill, shadow blur, exposure and tone mapping are also in `tuning`, applied by `applyLightTuning()` in `src/stage.js`. `main.js` adds it to everything under `world` at startup; anything added later (for example a loaded GLB) must call `addGrain()` on itself. Emissive materials are skipped.
+- Time of day follows position: the village is at night and the far side of the planet is in daylight. `src/daylight.js` measures how far the explorer has walked from the village and blends each light value from its night tuning to its `day*` tuning, between `dawnStart` and `dawnEnd` degrees.
+- Authored models are built in Blender from scripts in `art/blender/` and exported as Draco-compressed GLB into `src/world/models/`, with colour and ambient occlusion baked into one shared texture and glow kept as emissive materials (no lights). Import them with `?url` so Vite hashes them. See `art/blender/README.md`.
+- Houses come from a few Blender designs (`houses.glb`). `src/world/houses.js` draws every copy of a design with instancing and tints walls and window light per house; `village.js` lists which design goes where. Prefer a new colour or prop over a new design, and a new design over a one-off model.
 - The planned structure for multiple villages (each village as its own lazily loaded module, loaded by distance) is in `docs/roadmap.md`.
 
 ## Conventions
@@ -57,9 +61,17 @@ The planet will grow to 5–6 detailed villages, so keep an eye on cost from the
 - Triangles per frame: under 300k
 - Frame rate: 60 fps on desktop, 30+ fps on a mid-range phone
 
-Current baseline (one village): about 100 draw calls and 3,700 triangles.
+Current baseline (one village, measured 2026-10-22 with `renderer.info` after one render, shadow pass included): about 44 draw calls and 40k triangles in the close view; about 53 draw calls and 40k triangles in the wide planet view. Trees (70, in four shapes) and path dots are instanced; the houses (one draw call per part, plus a point light each) are now the largest remaining cost.
 
-- Share materials and geometry between repeated objects; use instancing for anything that repeats a lot (trees, rocks, lamps).
+To measure, run this in the dev server's console, with the camera at (0, 4.7, 34) looking at the origin for the wide view, or at (0, 4.5, 12.2) looking at (0, -2, 9.8) for the close view:
+
+```js
+const { scene, camera, renderer } = await import('/src/stage.js');
+camera.position.set(0, 4.7, 34); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
+renderer.render(scene, camera); renderer.info.render; // { calls, triangles, ... }
+```
+
+- Share materials and geometry between repeated objects; use instancing for anything that repeats a lot (trees, rocks, lamps). `instanced(model, capacity)` in `src/world/props.js` turns a model group into a factory of anchors that `place()` / `placeBlocked()` position as usual, drawn with one `InstancedMesh` per part. Merging a model's parts into one geometry with vertex colours (as the trees do) makes it a single draw call.
 - Avoid adding real-time point lights. Each one is computed for every pixel. Prefer emissive materials or baked lighting.
 - Dispose of geometry, materials and textures when removing objects.
 

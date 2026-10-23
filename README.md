@@ -13,7 +13,7 @@ npm run build     # production build into dist/
 npm run preview   # serve the production build locally
 ```
 
-The **Tune scene** panel (sliders icon, top right) adjusts walk/turn speed, hero size and height, and snow. While `SHOW_TUNER` is `true` in `src/config.js` it shows for everyone; set it to `false` to show it only with `?debug`. Shipping defaults live in `tuning` in `src/config.js`; the panel's **Copy values** button gives JSON to paste there.
+The **Tune scene** panel (sliders icon, top right) adjusts walk/turn speed, hero size, snow, the paper grain and the lighting. While `SHOW_TUNER` is `true` in `src/config.js` it shows for everyone; set it to `false` to show it only with `?debug`. Shipping defaults live in `tuning` in `src/config.js`; the panel's **Copy values** button gives JSON to paste there.
 
 ## Project layout
 
@@ -28,15 +28,20 @@ src/
   cameraRig.js        zoom (wheel, pinch) and third-person / planet-view framing
   snow.js             falling snow particles
   audio.js            synthesized bell jingle (Web Audio)
+  grain.js            kraft-paper grain shader added to every lit surface
   world/
     planet.js         planet mesh, surface placement, collision blockers
-    props.js          tree, house and path-stone builders
+    props.js          tree and path-stone builders
     village.js        where everything is placed
+    houses.js         instanced Blender house designs, tinted per house
+    models/           GLB models exported from art/blender/
     bell.js           bell landmark and its swing
   ui/hud.js           sound/view buttons, bell prompt and button, toast
   ui/touch.js         touch detection and the on-screen joystick
   debug/tuner.js      ?debug tuning panel (loaded only when requested)
   styles.css
+public/draco/         Draco decoder for compressed models (copied from three.js)
+art/blender/          scripts that build, render and export Blender models (see its README)
 ```
 
 `dist/` is build output and isn't committed. Vercel runs `npm run build` on every push and deploys the result; `main` goes to production, other branches get preview links.
