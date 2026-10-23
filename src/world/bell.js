@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { place } from './planet.js';
 
-// Bell landmark.
+// Bell landmark. It stands in the middle of the village square (see village.js).
+export const BELL_SPOT = [-6, 0]; // lat, lon: straight ahead of where the explorer starts
 export const bell = new THREE.Group();
 
 const archMat = new THREE.MeshStandardMaterial({ color: '#805a43', flatShading: true });
@@ -28,7 +29,7 @@ clapper.position.y = 0.88;
 bell.add(clapper);
 
 export function placeBell() {
-  place(bell, -2, -6, 0.05);
+  place(bell, ...BELL_SPOT, 0.05);
   const bellGlow = new THREE.PointLight('#ffd373', 1.3, 4);
   bellGlow.position.set(0, 1.1, 0.2);
   bell.add(bellGlow);

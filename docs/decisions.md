@@ -2,6 +2,22 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-22: The village is a square around the bell, entered by the road
+
+Houses stand in two rings around the bell, facing it, with trees around the edge. One road crosses the square north to south, and the explorer starts on it at the square's north edge, facing the bell. That keeps the third-person camera, which sits behind the explorer, over open road at the start instead of inside a roof. Anything new in the village should keep the road and the camera's view behind the start point clear.
+
+## 2026-10-22: Houses are a few instanced designs, varied by colour and light
+
+Rather than one unique model per house, a handful of Blender designs (cottage, townhouse, cabin, A-frame) share one baked texture and are drawn with instancing. Each house picks a design, a wall colour (walls are baked near-white and tinted at runtime) and how lit its windows are. Seven detailed houses cost fewer draw calls than the old primitive houses, replace six point lights with none, and download as one ~770 kB file (Draco meshes, WebP texture). Character should come from silhouettes, colours, lit windows and props before adding new designs.
+
+## 2026-10-22: Paper and lighting look set from the tuning panel (being evaluated)
+
+Grain and lighting are all tuning values, so the style can be changed without code. The defaults were dialled in by hand in the tuning panel: soft paper grain with some blotches and relief, a low, dim sun from behind, a strong moon, little sky fill, and ACES tone mapping. Live ambient occlusion was left out because it's too costly on phones; bake it into models instead.
+
+## 2026-10-22: Paper grain across the whole scene
+
+To move toward a handmade paper-model look, every lit surface gets a procedural kraft-paper grain (blotchy tone, fine fibres) in its shader instead of baked textures. One shader patch keeps the scene consistent, adds no downloads or draw calls, and is pinned to the planet so it doesn't swim as the planet turns. Fine detail fades out with distance to avoid shimmer. The strength is a tuning slider (default 1.5, 0 turns it off) while the look is being decided. The Blender house was simplified to match: thin crisp roof snow, no icicles or snow lumps.
+
 ## 2026-10-22: Tree variety from a few shapes, not one model per tree
 
 Trees come in four shapes (`fir`, `spruce` tall and narrow, `bush` short and wide, `spire` slim), each built once in code and merged into one vertex-coloured mesh: 2 draw calls per shape including shadows. Each tree is further varied by its own width, height and a random turn, and some stand in clusters. Their snow follows the houses' Blender style: roughened, with uneven dripping edges, small lumps over the edges and a drift at the foot. All randomness is seeded, so the planet looks the same on every visit.
