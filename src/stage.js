@@ -39,7 +39,6 @@ const SUN = { low: new THREE.Color('#ffe1a5'), high: new THREE.Color('#fff8ee') 
 
 // 0 is night at the village, 1 full day on the far side of the planet.
 let daylight = 0;
-export const getDaylight = () => daylight;
 export function setDaylight(amount) {
   if (Math.abs(amount - daylight) < 0.002) return;
   daylight = amount;

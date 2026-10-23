@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { R, tuning } from './config.js';
 import { world, blockers, snowHeight } from './world/planet.js';
 import { moveIntent } from './input.js';
-import { getDaylight } from './stage.js';
 
 // Explorer stays planted while the planet moves underneath; forward is always screen-up.
 export const hero = new THREE.Group();
@@ -35,7 +34,7 @@ function facets(geometry, color, spread = 0.06) {
 }
 
 const card = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 });
-const COAL ='#2e2a2b', CHEEK = '#f2a383', CARROT = '#f28a1e', WOOD = '#7a4a2c';
+const COAL = '#2e2a2b', CHEEK = '#f4b096', CARROT = '#f2780f', WOOD = '#7a4a2c';
 const WOOL = '#d8403a', HAT = '#3a3536', HOLLY = '#4c8a3f';
 
 // A chunky, squat body and an oversized head that sinks into it, so the two snowballs overlap. Each
@@ -71,9 +70,10 @@ function bodyShape(v) {
   return v.set(v.x * WIDE, Math.max(v.y, BASE * BODY), v.z * WIDE);
 }
 
-// The snow is soft matte card in a studio light. Each facet takes one tone from a small palette of
-// warm white, ivory, cream and very pale cool grey, so the folds show as gentle colour changes rather
-// than light and dark. The palette is a tiny texture, and every facet's UVs point at its tone.
+// The snow is matte card lit by the scene like everything else. Each facet takes one tone from a
+// small palette of warm white, ivory, cream and very pale cool grey for a gentle patchwork; the light
+// and shade come from how each flat facet faces the lights. The palette is a tiny texture, and every
+// facet's UVs point at its tone.
 const SNOW_TONES = ['#fcf9f3', '#f6eedf', '#f1e5cf', '#e9ecee'];
 const PALETTE_SIZE = 16;
 const palette = new Uint8Array(PALETTE_SIZE * 4);
@@ -88,43 +88,46 @@ snowPalette.colorSpace = THREE.SRGBColorSpace;
 snowPalette.magFilter = snowPalette.minFilter = THREE.NearestFilter;
 snowPalette.needsUpdate = true;
 
-// Every facet stays flat, but its normal is tipped toward the sky so the shaded side still reads as
-// white snow. At night a faint glow in the facet's own tone fills the shadows the way studio bounce
-// light would, so no facet drops to grey or picks up the blue of the sky; updatePlayer() fades it out
-// in daylight, where it would wash the facets out to plain white.
-function snowFacets(geometry) {
+// Ambient occlusion is baked into the vertex colours: the snow darkens softly in the crease where the
+// head sits in the body and where the body meets the ground. `occlusion` takes a point in the
+// snowman's own space and returns how much light reaches it, 1 being fully open.
+function snowFacets(geometry, toSnowman, occlusion) {
   const folded = geometry.index ? geometry.toNonIndexed() : geometry;
   const position = folded.attributes.position, count = position.count;
-  const uvs = new Float32Array(count * 2), normals = new Float32Array(count * 3);
-  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
-  const sky = new THREE.Vector3(0, 0.7, 0);
+  const uvs = new Float32Array(count * 2), colors = new Float32Array(count * 3);
+  const p = new THREE.Vector3();
   for (let i = 0; i < count; i += 3) {
-    a.fromBufferAttribute(position, i);
-    b.fromBufferAttribute(position, i + 1);
-    c.fromBufferAttribute(position, i + 2);
-    const normal = c.sub(b).cross(a.sub(b)).normalize().add(sky).normalize();
     const u = (Math.floor(Math.random() * PALETTE_SIZE) + 0.5) / PALETTE_SIZE;
     for (let j = 0; j < 3; j++) {
       uvs.set([u, 0.5], (i + j) * 2);
-      normal.toArray(normals, (i + j) * 3);
+      const light = occlusion(toSnowman(p.fromBufferAttribute(position, i + j)));
+      colors.set([light, light, light], (i + j) * 3);
     }
   }
   folded.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  folded.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  folded.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   return folded;
 }
-const snowCard = new THREE.MeshStandardMaterial({
-  map: snowPalette, emissiveMap: snowPalette, emissive: '#ffffff', emissiveIntensity: 0.5, roughness: 1, metalness: 0,
-});
-const SNOW_GLOW = { night: 0.5, day: 0.05 };
-snowCard.userData.grainOverGlow = true;
+const snowCard = new THREE.MeshStandardMaterial({ map: snowPalette, vertexColors: true, flatShading: true, roughness: 1, metalness: 0 });
 
-const bodyY = BODY * SQUASH * -BASE - 0.005;
-const snowballs = [[snowball(BODY, bodyShape), bodyY, SQUASH], [snowball(HEAD), bodyY + NECK + HEAD, 1]].map(([geometry, y, squash]) => {
+const bodyY = BODY * SQUASH * -BASE - 0.005, headY = bodyY + NECK + HEAD;
+const fade = (distance, reach) => THREE.MathUtils.smoothstep(distance, 0, reach);
+// How far a point is from the other snowball's surface (the body is a squashed, widened sphere), and
+// how high it is above the snow.
+const nearHead = (p) => fade(p.distanceTo(new THREE.Vector3(0, headY, 0)) - HEAD, 0.12);
+const nearBody = (p) => fade(new THREE.Vector3(p.x / WIDE, (p.y - bodyY) / SQUASH, p.z / WIDE).length() - BODY, 0.1);
+const shaded = (open) => (p) => 1 - 0.35 * (1 - open(p)) - 0.3 * (1 - fade(p.y, 0.1));
+
+const snowballs = [
+  [snowball(BODY, bodyShape), bodyY, SQUASH, shaded(nearHead)],
+  [snowball(HEAD), headY, 1, shaded(nearBody)],
+].map(([geometry, y, squash, occlusion]) => {
   const ball = new THREE.Group();
   ball.position.y = y;
-  const mesh = new THREE.Mesh(snowFacets(geometry), snowCard);
+  const toSnowman = (v) => v.set(v.x, v.y * squash + y, v.z);
+  const mesh = new THREE.Mesh(snowFacets(geometry, toSnowman, occlusion), snowCard);
   mesh.scale.y = squash;
+  mesh.castShadow = mesh.receiveShadow = true;
   ball.add(mesh);
   avatar.add(ball);
   return ball;
@@ -136,39 +139,71 @@ const face = new THREE.Group();
 face.scale.setScalar(HEAD / 0.2);
 head.add(face);
 
-// Small coal eyes, hexagonal paper blush and a coal smile that bends with the cheeks.
-const eyeGeometry = facets(new THREE.IcosahedronGeometry(0.024, 0), COAL, 0.05);
-const blushGeometry = facets(new THREE.CircleGeometry(0.03, 6), CHEEK, 0.04);
-const CHEEK_Y = -0.025;
+// Features sit on the head's curve: onHead() gives how far forward the surface is at a point on the
+// face, pulled in a touch because the flat facets sit just inside the round head.
+const onHead = (x, y) => Math.sqrt(0.04 - x * x - y * y) - 0.004;
+
+// A small lump of coal: a twenty-sided gem with each corner pulled in or out a little, so every lump
+// is irregular. Shared corners move together, so its facets stay closed.
+function coalLump(radius) {
+  const geometry = new THREE.IcosahedronGeometry(radius, 0);
+  const position = geometry.attributes.position, v = new THREE.Vector3(), moved = new Map();
+  for (let i = 0; i < position.count; i++) {
+    v.fromBufferAttribute(position, i);
+    const key = v.toArray().map((n) => n.toFixed(4)).join();
+    if (!moved.has(key)) moved.set(key, v.clone().multiplyScalar(0.8 + Math.random() * 0.35));
+    const p = moved.get(key);
+    position.setXYZ(i, p.x, p.y, p.z);
+  }
+  return facets(geometry, COAL, 0.08);
+}
+
+// Small, irregular coal eyes set evenly either side, and small hexagons of soft peach paper for
+// cheeks, a little below and outside the eyes.
+const blushGeometry = facets(new THREE.CircleGeometry(0.022, 6), CHEEK, 0.04);
+const EYE = { x: 0.078, y: 0.045 }, CHEEK_X = 0.115, CHEEK_Y = -0.01;
 const eyes = [], cheeks = [];
 for (const side of [-1, 1]) {
-  const eye = new THREE.Mesh(eyeGeometry, card);
-  eye.scale.z = 0.5;
-  eye.position.set(side * 0.068, 0.045, 0.188);
-  eye.rotation.y = side * 0.35;
+  const eye = new THREE.Mesh(coalLump(0.02), card);
+  eye.scale.z = 0.65;
+  eye.position.set(side * EYE.x, EYE.y, onHead(EYE.x, EYE.y) + 0.004);
+  eye.rotation.y = side * Math.asin(EYE.x / 0.2);
   const cheek = new THREE.Mesh(blushGeometry, card);
-  cheek.position.set(side * 0.125, CHEEK_Y, 0.155);
-  cheek.rotation.y = side * 0.7;
+  cheek.position.set(side * CHEEK_X, CHEEK_Y, onHead(CHEEK_X, CHEEK_Y) + 0.006);
+  cheek.rotation.y = side * Math.asin(CHEEK_X / 0.2);
   face.add(eye, cheek);
   eyes.push(eye);
   cheeks.push(cheek);
 }
-// The smile is an arc of coal hung from its lowest point. It morphs from a gentle curve to a deep,
-// beaming one (tighter and longer, the same width) when the snowman scoots toward the camera.
-function smileArc(radius, arc) {
-  return new THREE.TorusGeometry(radius, 0.009, 3, 9, arc).rotateZ(-Math.PI / 2 - arc / 2).translate(0, radius, 0);
+
+// One continuous coal smile: a thin, square-section strip bent through five straight segments along
+// a broad upward curve that follows the head. It morphs to a deeper, beaming curve of the same width
+// when the snowman scoots toward the camera.
+const SMILE = { halfWidth: 0.075, bottom: -0.085, gentle: 0.11, beaming: 0.08, segments: 5 };
+function smileStrip(radius) {
+  const half = Math.asin(SMILE.halfWidth / radius), path = new THREE.CurvePath();
+  let last;
+  for (let i = 0; i <= SMILE.segments; i++) {
+    const angle = (i / SMILE.segments * 2 - 1) * half;
+    const x = radius * Math.sin(angle), y = SMILE.bottom + radius * (1 - Math.cos(angle));
+    const point = new THREE.Vector3(x, y, onHead(x, y) + 0.006);
+    if (last) path.add(new THREE.LineCurve3(last, point));
+    last = point;
+  }
+  return new THREE.TubeGeometry(path, SMILE.segments, 0.009, 4);
 }
-const smileGeometry = facets(smileArc(0.075, Math.PI * 0.55), COAL, 0.05);
-smileGeometry.morphAttributes.position = [smileArc(0.06, Math.PI * 0.85).toNonIndexed().attributes.position];
+const smileGeometry = facets(smileStrip(SMILE.gentle), COAL, 0.05);
+smileGeometry.morphAttributes.position = [smileStrip(SMILE.beaming).toNonIndexed().attributes.position];
 const smile = new THREE.Mesh(smileGeometry, card);
-smile.position.set(0, -0.084, 0.18);
-smile.rotation.x = 0.3;
 face.add(smile);
 
-// A five-sided carrot, pointing a little to one side so its folds catch the light.
-const nose = new THREE.Mesh(facets(new THREE.ConeGeometry(0.03, 0.14, 5), CARROT, 0.1), card);
-nose.rotation.set(Math.PI / 2, 0, -0.35);
-nose.position.set(0.02, 0.0, 0.25);
+// A long carrot sticking straight out: six-sided, broad at the base and tapering to a point in three
+// folds, so it looks cut from card. It points a little to one side so its facets catch the light.
+const NOSE = { length: 0.17, turn: 0.25 };
+const nose = new THREE.Mesh(facets(new THREE.CylinderGeometry(0.002, 0.034, NOSE.length, 6, 3), CARROT, 0.1), card);
+nose.rotation.set(Math.PI / 2, 0, -NOSE.turn);
+// Its base sits on the face, so its middle is half its length out along the way it points.
+nose.position.set(Math.sin(NOSE.turn), 0, Math.cos(NOSE.turn)).multiplyScalar(NOSE.length / 2).add(new THREE.Vector3(0, 0, 0.192));
 face.add(nose);
 
 // A tall, slightly tipped top hat: an eight-sided crown on a wide brim, with a red band and a sprig of
@@ -325,6 +360,4 @@ export function updatePlayer(dt, t) {
   for (const eye of eyes) eye.scale.y = 1 - 0.6 * joy;
   for (const cheek of cheeks) cheek.position.y = CHEEK_Y + 0.012 * joy;
   smile.morphTargetInfluences[0] = joy;
-
-  snowCard.emissiveIntensity = THREE.MathUtils.lerp(SNOW_GLOW.night, SNOW_GLOW.day, getDaylight());
 }
