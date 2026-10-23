@@ -34,7 +34,10 @@ const BEFORE = {
   sunStrength: 2.6, sunHeight: 32, sunAngle: -39, shadowSoftness: 1, skyFill: 2.3, skyWarmth: 0,
   moonStrength: 1.1, exposure: 1, toneMapping: 0,
 };
+// "Default" is the shipping values from config.js, captured before any slider moves.
+const DEFAULT = Object.fromEntries(Object.keys(BEFORE).map(key => [key, tuning[key]]));
 const LOOKS = {
+  Default: DEFAULT,
   Before: BEFORE,
   Kraft: { ...BEFORE, grain: 1.5 },
   'Paper studio': {

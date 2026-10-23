@@ -13,7 +13,7 @@ npm run build     # production build into dist/
 npm run preview   # serve the production build locally
 ```
 
-The **Tune scene** panel (sliders icon, top right) adjusts walk/turn speed, hero size and height, snow, the paper grain and the lighting. Its look buttons switch the paper and light values in one click: **Before** (the original look), **Kraft** (blotchy grain) and **Paper studio** (the current default). While `SHOW_TUNER` is `true` in `src/config.js` it shows for everyone; set it to `false` to show it only with `?debug`. Shipping defaults live in `tuning` in `src/config.js`; the panel's **Copy values** button gives JSON to paste there.
+The **Tune scene** panel (sliders icon, top right) adjusts walk/turn speed, hero size and height, snow, the paper grain and the lighting. Its look buttons switch the paper and light values in one click: **Default** (the shipping values), **Before** (the original look), **Kraft** (blotchy grain) and **Paper studio** (soft studio light, fine grain). While `SHOW_TUNER` is `true` in `src/config.js` it shows for everyone; set it to `false` to show it only with `?debug`. Shipping defaults live in `tuning` in `src/config.js`; the panel's **Copy values** button gives JSON to paste there.
 
 ## Project layout
 

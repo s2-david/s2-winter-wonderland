@@ -22,20 +22,20 @@ export const tuning = {
   snowSize: 0.075,
   snowSpeed: 0.2,
   // Paper grain on surfaces (src/grain.js). Strength 0 turns it off.
-  // The defaults are the "Paper studio" look; the tuning panel can switch back to "Before".
-  grain: 1,
-  grainBlotch: 0, // large soft patches of tone
+  // Paper and light defaults were dialled in with the tuning panel; its look buttons compare alternatives.
+  grain: 0.95,
+  grainBlotch: 0.9, // large soft patches of tone
   grainSize: 0.6, // bigger is coarser fibres and grit
-  grainFibre: 0.6,
+  grainFibre: 0.45,
   grainRelief: 1.2, // how much the grain catches the light
   // Lighting (src/stage.js).
-  sunStrength: 3.4,
-  sunHeight: 36, // degrees above the horizon, seen from the explorer
-  sunAngle: -55, // degrees around the horizon; 0 is straight ahead
+  sunStrength: 1.45,
+  sunHeight: 5, // degrees above the horizon, seen from the explorer
+  sunAngle: 147, // degrees around the horizon; 0 is straight ahead
   shadowSoftness: 4,
-  skyFill: 1.2,
-  skyWarmth: 0.45, // 0 is the cool night sky, 1 a warm studio fill
-  moonStrength: 0.4,
-  exposure: 1.15,
-  toneMapping: 2, // 0 none, 1 ACES, 2 AgX
+  skyFill: 0.4,
+  skyWarmth: 0.34, // 0 is the cool night sky, 1 a warm studio fill
+  moonStrength: 1.65,
+  exposure: 0.99,
+  toneMapping: 1, // 0 none, 1 ACES, 2 AgX
 };
