@@ -4,7 +4,7 @@ Decisions already made, newest first. Check here before reopening a settled ques
 
 ## 2026-10-23: Cobblestone road, laid on the snow's slope
 
-The road's stepping-stone dots became about 330 cobblestones in staggered rows, thinning out at the ends and edges. They are one instanced flat-shaded stone (one draw call, about 12k triangles), each tinted, sized and turned on its own through a new `color` option on `instanced()`. Cobbles go down with `placeOnSnow()` in `planet.js`, which tilts each one to the snow surface under it and sinks it slightly; `place()` stands objects straight out from the planet's centre, which left one edge of a flat stone hanging off a drift's side. Turn speed now defaults to 5.5 (the tuning slider goes up to 8).
+The road's stepping-stone dots became about 330 cobblestones in staggered rows, thinning out at the ends and edges. They are one instanced flat-shaded stone (one draw call, about 12k triangles), each tinted, sized and turned on its own through a new `color` option on `instanced()`. Cobbles go down with `placeOnSnow()` in `planet.js`, which tilts each one to the snow surface under it and sinks it slightly; `place()` stands objects straight out from the planet's centre, which left one edge of a flat stone hanging off a drift's side. Turn speed now defaults to 0.5.
 
 ## 2026-10-23: Pillowy snow instead of a faceted planet
 
