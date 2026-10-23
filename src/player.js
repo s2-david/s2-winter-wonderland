@@ -76,20 +76,30 @@ head.add(face);
 // Small coal eyes, hexagonal paper blush and a coal smile that bends with the cheeks.
 const eyeGeometry = facets(new THREE.IcosahedronGeometry(0.024, 0), COAL, 0.05);
 const blushGeometry = facets(new THREE.CircleGeometry(0.03, 6), CHEEK, 0.04);
+const CHEEK_Y = -0.025;
+const eyes = [], cheeks = [];
 for (const side of [-1, 1]) {
   const eye = new THREE.Mesh(eyeGeometry, card);
   eye.scale.z = 0.5;
   eye.position.set(side * 0.068, 0.045, 0.188);
   eye.rotation.y = side * 0.35;
   const cheek = new THREE.Mesh(blushGeometry, card);
-  cheek.position.set(side * 0.125, -0.025, 0.155);
+  cheek.position.set(side * 0.125, CHEEK_Y, 0.155);
   cheek.rotation.y = side * 0.7;
   face.add(eye, cheek);
+  eyes.push(eye);
+  cheeks.push(cheek);
 }
-const SMILE = Math.PI * 0.55;
-const smile = new THREE.Mesh(facets(new THREE.TorusGeometry(0.075, 0.009, 3, 9, SMILE), COAL, 0.05), card);
-smile.position.set(0, -0.015, 0.205);
-smile.rotation.set(0.4, 0, -Math.PI / 2 - SMILE / 2);
+// The smile is an arc of coal hung from its lowest point. It morphs from a gentle curve to a deep,
+// beaming one (tighter and longer, the same width) when the snowman scoots toward the camera.
+function smileArc(radius, arc) {
+  return new THREE.TorusGeometry(radius, 0.009, 3, 9, arc).rotateZ(-Math.PI / 2 - arc / 2).translate(0, radius, 0);
+}
+const smileGeometry = facets(smileArc(0.075, Math.PI * 0.55), COAL, 0.05);
+smileGeometry.morphAttributes.position = [smileArc(0.06, Math.PI * 0.85).toNonIndexed().attributes.position];
+const smile = new THREE.Mesh(smileGeometry, card);
+smile.position.set(0, -0.084, 0.18);
+smile.rotation.x = 0.3;
 face.add(smile);
 
 // A five-sided carrot, pointing a little to one side so its folds catch the light.
@@ -238,4 +248,12 @@ export function updatePlayer(dt, t) {
     ball.rotation.z = lag * 0.04;
   });
   arms.forEach((arm, i) => { arm.rotation.x = sway * 0.15 * (i ? 1 : -1); });
+
+  // Scooting toward the camera, the snowman looks up at it and beams: the head tips back, the eyes
+  // squint happily, the cheeks lift and the smile deepens.
+  const joy = Math.min(1, Math.max(0, -motion));
+  head.rotation.x = -0.3 * joy;
+  for (const eye of eyes) eye.scale.y = 1 - 0.6 * joy;
+  for (const cheek of cheeks) cheek.position.y = CHEEK_Y + 0.012 * joy;
+  smile.morphTargetInfluences[0] = joy;
 }
