@@ -4,7 +4,7 @@ import { tuning } from '../config.js';
 const controls = [
   { heading: 'Explorer and snow' },
   { key: 'walkSpeed', label: 'Walk speed', min: 0.2, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
-  { key: 'turnSpeed', label: 'Turn speed', min: 0.2, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
+  { key: 'turnSpeed', label: 'Turn speed', min: 0.1, max: 2, step: 0.01, format: v => `${v.toFixed(2)}×` },
   { key: 'heroScale', label: 'Hero size', min: 0.2, max: 1.2, step: 0.01, format: v => `${v.toFixed(2)}×` },
   { key: 'snowDensity', label: 'Snow density', min: 0, max: 100, step: 1, format: v => `${v}%` },
   { key: 'snowSize', label: 'Snow size', min: 0.03, max: 0.24, step: 0.005, format: v => v.toFixed(3) },
@@ -27,6 +27,15 @@ const controls = [
   { key: 'moonStrength', label: 'Moon', min: 0, max: 3, step: 0.05, format: v => v.toFixed(2) },
   { key: 'exposure', label: 'Exposure', min: 0.3, max: 2.5, step: 0.01, format: v => v.toFixed(2) },
   { key: 'toneMapping', label: 'Tone map', min: 0, max: 2, step: 1, format: v => ['None', 'ACES', 'AgX'][v] },
+  { heading: 'Day (far side of the planet)' },
+  { key: 'dawnStart', label: 'Dawn starts', min: 0, max: 180, step: 1, format: v => `${v}°` },
+  { key: 'dawnEnd', label: 'Full day', min: 0, max: 180, step: 1, format: v => `${v}°` },
+  { key: 'daySunStrength', label: 'Sun', min: 0, max: 6, step: 0.05, format: v => v.toFixed(2) },
+  { key: 'daySunHeight', label: 'Sun height', min: 5, max: 85, step: 1, format: v => `${v}°` },
+  { key: 'daySkyFill', label: 'Sky fill', min: 0, max: 5, step: 0.05, format: v => v.toFixed(2) },
+  { key: 'daySkyWarmth', label: 'Sky warmth', min: 0, max: 1, step: 0.01, format: v => v.toFixed(2) },
+  { key: 'dayMoonStrength', label: 'Moon', min: 0, max: 3, step: 0.05, format: v => v.toFixed(2) },
+  { key: 'dayExposure', label: 'Exposure', min: 0.3, max: 2.5, step: 0.01, format: v => v.toFixed(2) },
 ];
 
 // Lucide "sliders-horizontal" icon (ISC license, lucide.dev)

@@ -2,6 +2,8 @@
 export const R = 10;
 
 export const SKY_COLOR = '#101b3a';
+// The far side of the planet is in daylight (src/daylight.js).
+export const DAY_SKY_COLOR = '#a9d2f2';
 
 export const ZOOM = { start: 18.5, min: 13.5, max: 36, close: 16, wide: 34 };
 
@@ -15,7 +17,7 @@ export const SHOW_TUNER = true;
 // Values the tuning panel can change at runtime. These defaults are what visitors get.
 export const tuning = {
   walkSpeed: 0.2,
-  turnSpeed: 0.35,
+  turnSpeed: 0.196,
   heroScale: 0.4, // explorer size relative to how the model was first built
   snowDensity: 100,
   snowSize: 0.07,
@@ -39,4 +41,14 @@ export const tuning = {
   moonStrength: 1.65,
   exposure: 0.99,
   toneMapping: 1, // 0 none, 1 ACES, 2 AgX
+  // Daylight on the far side of the planet (src/daylight.js). The light values above are the night
+  // at the village; these are what they become in full day.
+  dawnStart: 60, // degrees walked from the village before the sky starts to lighten
+  dawnEnd: 150, // degrees walked from the village to reach full day
+  daySunStrength: 2.6,
+  daySunHeight: 50,
+  daySkyFill: 1.4,
+  daySkyWarmth: 0.15,
+  dayMoonStrength: 0,
+  dayExposure: 1.05,
 };
