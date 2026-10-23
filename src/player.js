@@ -59,7 +59,7 @@ const [, middle, head] = snowballs;
 const eyeGeometry = new THREE.SphereGeometry(0.026, 6, 4);
 for (const x of [-0.05, 0.05]) {
   const eye = new THREE.Mesh(eyeGeometry, coal);
-  eye.position.set(x, 0.04, 0.125);
+  eye.position.set(x, 0.03, 0.125);
   head.add(eye);
 }
 
@@ -67,6 +67,16 @@ const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 6), new THREE.Mes
 nose.rotation.x = Math.PI / 2;
 nose.position.set(0, -0.01, 0.2);
 head.add(nose);
+
+// A blue knit beanie: a tall dome over the top of the head, a darker folded band and a snowy pom-pom.
+const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#7b9bd0', flatShading: true }));
+beanie.position.y = 0.07;
+beanie.scale.y = 1.15;
+const band = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.045, 16), new THREE.MeshStandardMaterial({ color: '#3b557c', flatShading: true }));
+band.position.y = 0.075;
+const pompom = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), snow);
+pompom.position.y = 0.25;
+head.add(beanie, band, pompom);
 
 // Each arm pivots at the shoulder, so the geometry starts at its base rather than its middle.
 const stickGeometry = new THREE.CylinderGeometry(0.012, 0.018, 0.34, 5).translate(0, 0.17, 0);
@@ -83,10 +93,18 @@ const arms = [-1, 1].map((side) => {
   return arm;
 });
 
-// A bright scarf knot marks the explorer's fixed, forward-facing heading.
-const scarf = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: '#ffd260', flatShading: true }));
-scarf.position.set(0, 0.14, 0.13);
-middle.add(scarf);
+// The scarf matches the beanie and wraps the neck where the head meets the middle snowball. Its knot
+// and tail sit at the front, marking the explorer's fixed, forward-facing heading.
+const scarfMaterial = new THREE.MeshStandardMaterial({ color: '#7b9bd0', flatShading: true });
+const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 6, 16), scarfMaterial);
+wrap.rotation.x = Math.PI / 2;
+wrap.position.y = 0.15;
+const knot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), scarfMaterial);
+knot.position.set(0, 0.14, 0.13);
+const tail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.17, 0.02), scarfMaterial);
+tail.position.set(0.03, 0.05, 0.18);
+tail.rotation.set(-0.25, 0, 0.2);
+middle.add(wrap, knot, tail);
 
 export function applyHeroTuning() {
   avatar.scale.setScalar(tuning.heroScale);
