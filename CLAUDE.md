@@ -58,7 +58,7 @@ The planet will grow to 5–6 detailed villages, so keep an eye on cost from the
 - Triangles per frame: under 300k
 - Frame rate: 60 fps on desktop, 30+ fps on a mid-range phone
 
-Current baseline (one village, measured 2026-10-22 with `renderer.info` after one render, shadow pass included): about 46 draw calls and 15k triangles in the close view; about 55 draw calls and 15k triangles in the wide planet view. Trees and path dots are instanced; the houses (one draw call per part, plus a point light each) are now the largest remaining cost.
+Current baseline (one village, measured 2026-10-22 with `renderer.info` after one render, shadow pass included): about 44 draw calls and 40k triangles in the close view; about 53 draw calls and 40k triangles in the wide planet view. Trees (70, in four shapes) and path dots are instanced; the houses (one draw call per part, plus a point light each) are now the largest remaining cost.
 
 To measure, run this in the dev server's console, with the camera at (0, 4.7, 34) looking at the origin for the wide view, or at (0, 4.5, 12.2) looking at (0, -2, 9.8) for the close view:
 
@@ -68,7 +68,7 @@ camera.position.set(0, 4.7, 34); camera.lookAt(0, 0, 0); camera.updateMatrixWorl
 renderer.render(scene, camera); renderer.info.render; // { calls, triangles, ... }
 ```
 
-- Share materials and geometry between repeated objects; use instancing for anything that repeats a lot (trees, rocks, lamps). `instanced(model, capacity)` in `src/world/props.js` turns a model group into a factory of anchors that `place()` / `placeBlocked()` position as usual, drawn with one `InstancedMesh` per part.
+- Share materials and geometry between repeated objects; use instancing for anything that repeats a lot (trees, rocks, lamps). `instanced(model, capacity)` in `src/world/props.js` turns a model group into a factory of anchors that `place()` / `placeBlocked()` position as usual, drawn with one `InstancedMesh` per part. Merging a model's parts into one geometry with vertex colours (as the trees do) makes it a single draw call.
 - Avoid adding real-time point lights. Each one is computed for every pixel. Prefer emissive materials or baked lighting.
 - Dispose of geometry, materials and textures when removing objects.
 

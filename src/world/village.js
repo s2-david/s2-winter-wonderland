@@ -1,5 +1,5 @@
 import { place, placeBlocked } from './planet.js';
-import { makeTree, makeHouse, makePathDot } from './props.js';
+import { makeTree, treeReach, makeHouse, makePathDot } from './props.js';
 import { placeBlenderHouse } from './blenderHouse.js';
 
 // A curved breadcrumb path and a warm village near the starting location.
@@ -10,8 +10,24 @@ export function buildVillage() {
   }
 
   // The first ten degrees around the explorer are a deliberately obstacle-free snow plaza.
-  const trees = [[9, -12, 1.0], [12, 10, 0.83], [-8, 15, 0.85], [17, -18, 0.72], [-16, -18, 0.9], [3, 29, 0.75], [-20, 28, 0.85], [-3, -37, 0.76]];
-  trees.forEach(([lat, lon, s]) => placeBlocked(makeTree(s), lat, lon, 0.04, 0.27 + s * 0.18));
+  const trees = [
+    [9, -12, 1.0, { kind: 'spruce', height: 1.1 }], [12, 10, 0.83], [-8, 15, 0.85],
+    [17, -18, 0.72, { kind: 'spire' }], [-16, -18, 0.9, { kind: 'bush', width: 1.1 }], [3, 29, 0.75, { kind: 'spruce' }],
+    [-20, 28, 0.85, { kind: 'bush', height: 1.2 }], [-3, -37, 0.76, { kind: 'spire', width: 1.2 }],
+  ];
+  trees.forEach(([lat, lon, s, shape]) => plantTree(lat, lon, s, shape, 0.04));
+
+  // Small stands of mixed trees: a tall one in the middle with smaller, varied ones around it.
+  const clusters = [[24, 2, 5], [-26, 4, 4], [30, -32, 6], [-30, 40, 5], [2, 50, 4], [-4, -52, 5]];
+  clusters.forEach(([lat, lon, count], c) => {
+    plantTree(lat, lon, 1.05, { kind: c % 2 ? 'spruce' : 'fir', height: 1.15 }, 0.04);
+    for (let k = 0; k < count; k++) {
+      const a = (k / count + c * 0.13) * Math.PI * 2, d = 3.6 + (k % 2) * 0.9;
+      const kind = KINDS[(k + c) % KINDS.length];
+      const shape = { kind, width: 0.85 + ((k * 7 + c) % 4) * 0.1, height: 0.8 + ((k * 5 + c) % 5) * 0.1 };
+      plantTree(lat + Math.cos(a) * d, lon + Math.sin(a) * d / Math.cos(lat * Math.PI / 180), 0.55 + ((k + c) % 3) * 0.15, shape, 0.03);
+    }
+  });
 
   // The Blender-made house stands in for the red house that used to be here.
   placeBlenderHouse(11, 9);
@@ -23,6 +39,13 @@ export function buildVillage() {
     const lat = (i * 37) % 84 - 42, lon = (i * 71) % 150 - 75;
     if (Math.abs(lat) < 25 && Math.abs(lon) < 42) continue;
     const s = 0.42 + (i % 4) * 0.13;
-    placeBlocked(makeTree(s), lat, lon, 0.03, 0.23 + s * 0.18);
+    plantTree(lat, lon, s, { kind: KINDS[i % KINDS.length], width: 0.85 + (i % 3) * 0.12, height: 0.85 + (i % 5) * 0.1 }, 0.03);
   }
+}
+
+const KINDS = ['fir', 'spruce', 'bush', 'spire'];
+
+// Collision grows with how far the lowest branches reach.
+function plantTree(lat, lon, s, shape = {}, lift) {
+  placeBlocked(makeTree(s, shape), lat, lon, lift, 0.2 + 0.45 * treeReach(s, shape));
 }
