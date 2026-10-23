@@ -1,19 +1,53 @@
 import * as THREE from 'three';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { R } from '../config.js';
 
 // Everything on the planet lives in this group. Walking and steering rotate it beneath the fixed explorer.
 export const world = new THREE.Group();
 
-const snowMat = new THREE.MeshStandardMaterial({ color: '#eaf6ff', roughness: 0.9, flatShading: true });
-export const ground = new THREE.Mesh(new THREE.IcosahedronGeometry(R, 5), snowMat);
+// Soft snow drifts: overlapping rounded mounds, broad ones with smaller ones on top. Seeded, so the
+// planet is the same on every visit. Each is { dir, cosReach, height }.
+const drifts = [];
+let seed = 7;
+const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+for (const [count, reach, height] of [[70, [0.22, 0.38], 0.32], [220, [0.08, 0.15], 0.1]]) {
+  for (let i = 0; i < count; i++) {
+    const dir = new THREE.Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
+    const angle = THREE.MathUtils.lerp(reach[0], reach[1], rand());
+    drifts.push({ dir, cosReach: Math.cos(angle), height: height * (0.5 + rand() * 0.5) });
+  }
+}
+
+// Height of the snow above R along a unit direction in the planet's own frame.
+export function snowHeight(dir) {
+  let h = 0;
+  for (const d of drifts) {
+    const c = dir.dot(d.dir);
+    if (c <= d.cosReach) continue;
+    const t = (1 - c) / (1 - d.cosReach); // 0 at the mound's top, 1 at its edge (about angle² / reach²)
+    h += d.height * (1 - t) * (1 - t);
+  }
+  return h;
+}
+
+function snowGeometry() {
+  // Shared vertices and smooth normals, so the drifts read as soft rather than faceted. Detail 31
+  // (about 20k triangles, edges about a third of a unit) is fine enough to keep the small drifts round.
+  const geo = mergeVertices(new THREE.IcosahedronGeometry(R, 31));
+  const p = geo.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).normalize();
+    v.multiplyScalar(R + snowHeight(v));
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+const snowMat = new THREE.MeshStandardMaterial({ color: '#eaf6ff', roughness: 0.9 });
+export const ground = new THREE.Mesh(snowGeometry(), snowMat);
 ground.receiveShadow = true;
 world.add(ground);
-
-const ice = new THREE.Mesh(
-  new THREE.IcosahedronGeometry(R * 1.002, 3),
-  new THREE.MeshStandardMaterial({ color: '#ccecff', roughness: 0.65, transparent: true, opacity: 0.18, flatShading: true }),
-);
-world.add(ice);
 
 // Objects the explorer collides with: { obj, radius }.
 export const blockers = [];
@@ -24,8 +58,8 @@ export function point(lat, lon, extra = 0) {
   return new THREE.Vector3(r * Math.cos(a) * Math.sin(b), r * Math.sin(a), r * Math.cos(a) * Math.cos(b));
 }
 
-// The planet is deliberately faceted, so its visible surface sits a little inside the mathematical
-// sphere between vertices. Raycast each landmark onto that real surface instead of leaving it to hover.
+// The snow rises and falls in drifts. Raycast each landmark onto the real surface so it neither hovers
+// nor sinks.
 const surfaceRaycaster = new THREE.Raycaster();
 function surfacePoint(lat, lon, lift = 0) {
   const radial = point(lat, lon).normalize();
