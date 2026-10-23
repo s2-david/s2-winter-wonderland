@@ -35,13 +35,10 @@ export function buildVillage() {
     ['Townhouse', '#efe8da', 0.12], ['Cottage', '#d6a043', 0.85], ['Aframe', '#b8603a', 0.5], ['Townhouse', '#a3301f', 1],
   ];
   const innerAngles = [-52.5, -17.5, 17.5, 52.5, 127.5, 162.5, 197.5, 232.5];
-  const outer = [
-    ['Cabin', '#a3301f', 0.85, 35], ['Cabin', '#7f97a6', 1, 0], ['Aframe', '#c9b48a', 1, 145],
-    ['Cabin', '#8a6a4f', 0.6, 180], ['Cabin', '#7d9568', 1, 215],
-  ];
+  const outer = [['Cabin', '#7f97a6', 1, 0], ['Cabin', '#8a6a4f', 0.6, 180]];
   placeHouses([
     ...inner.map(([design, wall, light], i) => ({ design, wall, light, ...aroundBell(15, innerAngles[i]), facing: BELL_SPOT })),
-    ...outer.map(([design, wall, light, angle]) => ({ design, wall, light, ...aroundBell(24, angle), facing: BELL_SPOT })),
+    ...outer.map(([design, wall, light, angle]) => ({ design, wall, light, ...aroundBell(28, angle), facing: BELL_SPOT })),
   ]);
 
   // Trees: a ring of mixed shapes around the village, and a pair flanking the road where it enters each side.

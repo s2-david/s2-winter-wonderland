@@ -12,6 +12,9 @@ import housesUrl from './models/houses.glb?url';
 // the planet. Walls are baked near-white and tinted per house; windows add no lights.
 const MODEL_SCALE = 0.55;
 
+// Lit window panes: a warm lamp-light amber.
+const WINDOW_GLOW = new THREE.Color('#ff9a3c');
+
 // Per design, in planet units: collision radius, and how far in front of the centre the door is.
 const DESIGNS = {
   Cottage: { radius: 0.72, front: 0.72 },
@@ -86,7 +89,7 @@ export function placeHouses(houses) {
   const draco = new DRACOLoader().setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
   new GLTFLoader().setDRACOLoader(draco).load(housesUrl, ({ scene: model }) => {
     model.updateMatrixWorld(true);
-    const haloMaterial = glowMaterial([[0, 'rgba(255, 170, 80, 0.9)'], [0.4, 'rgba(255, 135, 55, 0.4)'], [1, 'rgba(255, 110, 40, 0)']]);
+    const haloMaterial = glowMaterial([[0, 'rgba(255, 100, 25, 0.4)'], [0.4, 'rgba(255, 90, 20, 0.22)'], [1, 'rgba(255, 80, 15, 0)']]);
     const glowMaterials = new Map();
 
     for (const design of Object.keys(DESIGNS)) {
@@ -99,9 +102,10 @@ export function placeHouses(houses) {
           const geometry = o.geometry.clone().applyMatrix4(o.matrixWorld);
           if (kind === 'Glow') {
             // Unlit and tinted per house, so some houses can have their lights off.
+            // The baked emissive is strong enough to tone-map to near-white, so panes get a fixed
+            // amber instead, untouched by tone mapping. The halo drawn over each pane lightens it a little.
             if (!glowMaterials.has(o.material)) {
-              const color = o.material.emissive.clone().multiplyScalar(o.material.emissiveIntensity);
-              glowMaterials.set(o.material, new THREE.MeshBasicMaterial({ color }));
+              glowMaterials.set(o.material, new THREE.MeshBasicMaterial({ color: WINDOW_GLOW, toneMapped: false }));
             }
             instanced(geometry, glowMaterials.get(o.material), mine, lightColor);
             return;
