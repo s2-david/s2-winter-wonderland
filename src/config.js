@@ -17,7 +17,7 @@ export const SHOW_TUNER = true;
 // Values the tuning panel can change at runtime. These defaults are what visitors get.
 export const tuning = {
   walkSpeed: 0.2,
-  turnSpeed: 0.196,
+  turnSpeed: 0.5,
   heroScale: 0.56, // explorer size relative to how the model was first built
   snowDensity: 100,
   snowSize: 0.07,
