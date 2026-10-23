@@ -76,6 +76,20 @@ export function place(obj, lat, lon, lift = 0, embed = 0.13) {
   return obj;
 }
 
+// For flat things laid on the snow (cobbles): tilt to the slope of the snow surface itself rather
+// than standing straight up from the planet's centre, so no edge lifts off a drift's side, and sink
+// the centre `sink` below the surface so the object sits in the snow.
+export function placeOnSnow(obj, lat, lon, sink = 0) {
+  const radial = point(lat, lon).normalize();
+  surfaceRaycaster.set(radial.clone().multiplyScalar(R + 3), radial.clone().negate());
+  const hit = surfaceRaycaster.intersectObject(ground, false)[0];
+  const up = hit ? hit.face.normal : radial;
+  obj.position.copy(hit ? hit.point : point(lat, lon)).addScaledVector(up, -sink);
+  obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), up);
+  world.add(obj);
+  return obj;
+}
+
 export function placeBlocked(obj, lat, lon, lift, radius) {
   place(obj, lat, lon, lift);
   blockers.push({ obj, radius });

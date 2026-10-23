@@ -61,7 +61,7 @@ The planet will grow to 5–6 detailed villages, so keep an eye on cost from the
 - Triangles per frame: under 300k
 - Frame rate: 60 fps on desktop, 30+ fps on a mid-range phone
 
-Current baseline (one village, measured 2026-10-23 with `renderer.info` after one render, shadow pass included): about 36 draw calls and 140k triangles in both the close and the wide planet view. The smooth snow ground is about 20k of those triangles. Trees (70, in four shapes), path dots and houses are instanced.
+Current baseline (one village, measured 2026-10-23 with `renderer.info` after one render, shadow pass included): about 36 draw calls and 140k triangles in both the close and the wide planet view. The smooth snow ground is about 20k of those triangles. Trees (70, in four shapes), road cobblestones and houses are instanced.
 
 To measure, run this in the dev server's console, with the camera at (0, 4.7, 34) looking at the origin for the wide view, or at (0, 4.5, 12.2) looking at (0, -2, 9.8) for the close view:
 

@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-// Props that repeat a lot are drawn with one InstancedMesh per part, so every tree (or path dot)
+// Props that repeat a lot are drawn with one InstancedMesh per part, so every tree (or cobblestone)
 // on the planet shares a handful of draw calls. `instanced(model)` returns a factory that hands out
 // empty anchors: place()/placeBlocked() position an anchor as usual (and it still works as a
 // collision blocker), and when it is added to the world its pose is copied into each part's instances.
-// Each instance can also be stretched (width, height) and turned (yaw) about its own up axis.
+// Each instance can also be stretched (width, height), turned (yaw) about its own up axis and tinted (color).
 function instanced(model, capacity) {
   const parts = model.children.map(part => {
     part.updateMatrix();
@@ -14,8 +14,9 @@ function instanced(model, capacity) {
   let meshes = null;
   const pose = new THREE.Matrix4(), shape = new THREE.Matrix4(), m = new THREE.Matrix4();
   const origin = new THREE.Vector3(), turn = new THREE.Quaternion(), size = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  const tint = new THREE.Color();
 
-  return (scale = 1, { width = 1, height = 1, yaw = 0 } = {}) => {
+  return (scale = 1, { width = 1, height = 1, yaw = 0, color } = {}) => {
     const anchor = new THREE.Object3D();
     anchor.addEventListener('added', function onAdded() {
       anchor.removeEventListener('added', onAdded);
@@ -23,6 +24,7 @@ function instanced(model, capacity) {
         meshes = parts.map(part => {
           const mesh = new THREE.InstancedMesh(part.geometry, part.material, capacity);
           mesh.castShadow = part.castShadow;
+          mesh.receiveShadow = part.receiveShadow;
           mesh.count = 0;
           anchor.parent.add(mesh);
           return mesh;
@@ -33,6 +35,8 @@ function instanced(model, capacity) {
       shape.compose(origin, turn.setFromAxisAngle(up, yaw), size.set(scale * width, scale * height, scale * width));
       pose.multiplyMatrices(anchor.matrix, shape);
       meshes.forEach((mesh, i) => {
+        // A factory either tints every instance or none, since untinted instances would render black.
+        if (color) mesh.setColorAt(mesh.count, tint.set(color));
         mesh.setMatrixAt(mesh.count++, m.multiplyMatrices(pose, parts[i].matrix));
         mesh.instanceMatrix.needsUpdate = true;
         // Recomputed on the next frustum check, so culling covers every instance.
@@ -169,13 +173,16 @@ export function treeReach(scale = 1, { kind = 'fir', width = 1 } = {}) {
   return TREE_KINDS[kind].r * scale * width;
 }
 
-function pathDotModel() {
+// A cobblestone: a squashed, slightly long dodecahedron, so the flat-shaded top reads as a worn,
+// rounded stone. Each cobble is tinted, sized and turned on its own (see the road in village.js).
+function cobbleModel() {
+  const geo = new THREE.DodecahedronGeometry(1, 0);
+  geo.scale(0.085, 0.04, 0.07);
+  const stone = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, flatShading: true }));
+  stone.receiveShadow = true;
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(
-    new THREE.CylinderGeometry(0.2, 0.25, 0.035, 8),
-    new THREE.MeshStandardMaterial({ color: '#b7d3dd', roughness: 1, flatShading: true }),
-  ));
+  g.add(stone);
   return g;
 }
 
-export const makePathDot = instanced(pathDotModel(), 512);
+export const makeCobble = instanced(cobbleModel(), 1024);
