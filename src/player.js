@@ -101,7 +101,7 @@ face.add(nose);
 // A tall, slightly tipped top hat: an eight-sided crown on a wide brim, with a red band and a sprig of
 // holly (two leaves and three berries) on the front.
 const hat = new THREE.Group();
-hat.position.set(0, 0.15, 0);
+hat.position.set(0, 0.11, 0);
 hat.rotation.set(-0.08, 0, 0.12);
 const brim = new THREE.Mesh(facets(new THREE.CylinderGeometry(0.27, 0.27, 0.025, 10), HAT, 0.06), card);
 const crown = new THREE.Mesh(facets(new THREE.CylinderGeometry(0.15, 0.165, 0.24, 8), HAT, 0.08), card);
