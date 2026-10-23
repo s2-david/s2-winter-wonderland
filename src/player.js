@@ -3,12 +3,16 @@ import { R, tuning } from './config.js';
 import { world, blockers, snowHeight } from './world/planet.js';
 import { moveIntent } from './input.js';
 
-// Explorer stays planted and always faces the forward screen direction while the planet moves underneath.
+// Explorer stays planted while the planet moves underneath; forward is always screen-up.
 export const hero = new THREE.Group();
 hero.position.set(0, 0, R);
 hero.rotation.x = Math.PI / 2;
 
+// Standing still, the snowman turns round to face the camera behind it so its face is in view.
+// updatePlayer() swings it back to face screen-up while it walks forward.
+const FACE_CAMERA = Math.PI;
 const avatar = new THREE.Group();
+avatar.rotation.y = FACE_CAMERA;
 hero.add(avatar);
 
 // The explorer is a papercraft snowman: two low-poly snowballs folded from matte card, each facet a
@@ -36,10 +40,27 @@ const WOOL = '#d8403a', HAT = '#3a3536', HOLLY = '#4c8a3f';
 // A big, fat body (squashed a little so it sits heavy) and a smaller head. Each snowball is its own
 // group so it can sway separately; the face, hat, scarf and arms ride along.
 const BODY = 0.36, SQUASH = 0.92, HEAD = 0.22;
-const snowballs = [[BODY, 0.33, SQUASH], [HEAD, 0.84, 1]].map(([radius, y, squash]) => {
+
+// The body is pressed into the ground like a pear: widest low down, with its base flattened where it
+// sits in the snow. bodyWidth() is how far the sides bulge at a height (as a fraction of the radius),
+// so buttons and the scarf tail can sit on the surface.
+const BASE = -0.66;
+const bodyWidth = (height) => 1 + 0.07 * (1 - height);
+function bodyGeometry() {
+  const geometry = new THREE.IcosahedronGeometry(BODY, 2);
+  const position = geometry.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < position.count; i++) {
+    v.fromBufferAttribute(position, i);
+    const height = v.y / BODY, bulge = bodyWidth(height);
+    position.setXYZ(i, v.x * bulge, Math.max(height, BASE) * BODY, v.z * bulge);
+  }
+  return geometry;
+}
+
+const snowballs = [[bodyGeometry(), 0.21, SQUASH], [new THREE.IcosahedronGeometry(HEAD, 2), 0.72, 1]].map(([geometry, y, squash]) => {
   const ball = new THREE.Group();
   ball.position.y = y;
-  const mesh = new THREE.Mesh(facets(new THREE.IcosahedronGeometry(radius, 2), SNOW, 0.05), card);
+  const mesh = new THREE.Mesh(facets(geometry, SNOW, 0.05), card);
   mesh.scale.y = squash;
   ball.add(mesh);
   avatar.add(ball);
@@ -110,7 +131,7 @@ for (const y of [0.14, 0.02, -0.1]) {
   const lift = Math.asin(y / SQUASH / BODY);
   const button = new THREE.Mesh(buttonGeometry, card);
   button.scale.z = 0.45;
-  button.position.set(0.04, y, BODY * Math.cos(lift) - 0.005);
+  button.position.set(0.04, y, BODY * Math.cos(lift) * bodyWidth(Math.sin(lift)) - 0.005);
   button.rotation.set(-lift, 0.1, 0);
   body.add(button);
 }
@@ -135,13 +156,13 @@ const arms = [-1, 1].map((side) => {
 });
 
 // A red scarf wraps the neck where the head meets the body, with one flat paper tail hanging down the
-// front of the body. The tail marks the explorer's fixed, forward-facing heading.
+// front of the body.
 const wrap = new THREE.Mesh(facets(new THREE.TorusGeometry(0.17, 0.05, 4, 12), WOOL, 0.1), card);
 wrap.rotation.x = Math.PI / 2;
 wrap.position.y = 0.29;
 body.add(wrap);
 // The tail is two flat panels folded at the middle so it lies along the curve of the body.
-for (const [y, z, length, tilt] of [[0.215, 0.275, 0.17, 0.74], [0.08, 0.36, 0.16, 0.26]]) {
+for (const [y, z, length, tilt] of [[0.215, 0.28, 0.17, 0.74], [0.08, 0.375, 0.16, 0.26]]) {
   const panel = new THREE.Mesh(facets(new THREE.BoxGeometry(0.095, length, 0.02), WOOL, 0.1), card);
   panel.position.set(-0.07, y, z);
   panel.rotation.set(-tilt, -0.2, 0);
@@ -176,6 +197,7 @@ function tryMove(amount) {
 }
 
 const underfoot = new THREE.Vector3(), undo = new THREE.Quaternion();
+let motion = 0; // forward intent, eased so the scoot starts and stops smoothly
 
 export function updatePlayer(dt, t) {
   const { forward, turn } = moveIntent();
@@ -185,7 +207,6 @@ export function updatePlayer(dt, t) {
   if (turn) world.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), turnRate * turn * dt));
 
   // Backing up is slower than walking forward. The joystick scales speed by how far it's pushed.
-  const walking = forward !== 0;
   const speed = 1.05 * tuning.walkSpeed;
   if (forward > 0) tryMove(-speed * forward * dt);
   if (forward < 0) tryMove(speed * 0.65 * -forward * dt);
@@ -194,14 +215,27 @@ export function updatePlayer(dt, t) {
   underfoot.set(0, 0, 1).applyQuaternion(undo.copy(world.quaternion).invert());
   hero.position.z = R + snowHeight(underfoot);
 
-  // With no legs, the snowman waddles side to side and its arms bob while it walks.
-  const swing = walking ? Math.sin(t * 0.014) : 0;
-  avatar.rotation.z = swing * 0.06;
-  // Each snowball lags the one below it, so the stack wobbles like loosely packed snow.
+  // Face where it's going: away from the camera when walking forward, towards it when backing up or
+  // standing still. Easing makes the turn a quick spin rather than a snap.
+  const facing = forward > 0 ? 0 : FACE_CAMERA;
+  avatar.rotation.y += (facing - avatar.rotation.y) * (1 - Math.exp(-10 * dt));
+
+  // With no legs, the snowman scoots: it leans into the direction it's travelling and pushes along in
+  // small hops, with just a little side-to-side wobble. Easing the motion in and out lets it settle
+  // when it stops instead of freezing mid-hop.
+  motion += (forward - motion) * (1 - Math.exp(-8 * dt));
+  const gait = Math.abs(motion);
+  const phase = t * 0.011;
+  const hop = Math.abs(Math.sin(phase)) * gait;
+  avatar.position.y = hop * 0.035;
+  avatar.rotation.x = motion * (0.06 + hop * 0.06);
+  const sway = Math.sin(phase) * gait;
+  avatar.rotation.z = sway * 0.025;
+  // The head lags the body a touch, so the stack still reads as loosely packed snow.
   snowballs.forEach((ball, i) => {
-    const lag = walking ? Math.sin(t * 0.014 - i * 0.7) : 0;
-    ball.position.x = lag * 0.015 * i;
-    ball.rotation.z = lag * 0.1;
+    const lag = Math.sin(phase - i * 0.7) * gait;
+    ball.position.x = lag * 0.006 * i;
+    ball.rotation.z = lag * 0.04;
   });
-  arms.forEach((arm, i) => { arm.rotation.x = swing * 0.3 * (i ? 1 : -1); });
+  arms.forEach((arm, i) => { arm.rotation.x = sway * 0.15 * (i ? 1 : -1); });
 }
