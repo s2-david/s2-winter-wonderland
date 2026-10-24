@@ -1,11 +1,11 @@
 import './styles.css';
 import { BELL_RANGE, SHOW_TUNER } from './config.js';
 import { scene, camera, renderer, applyLightTuning } from './stage.js';
-import { world } from './world/planet.js';
+import { world, updateHorizon } from './world/planet.js';
 import { buildVillage } from './world/village.js';
 import { placeBell, swingBell, updateBell, distanceToBell } from './world/bell.js';
 import { hero, applyHeroTuning, updatePlayer } from './player.js';
-import { toggleView, updateCamera } from './cameraRig.js';
+import { toggleView, updateCamera, viewFrom } from './cameraRig.js';
 import { snow, applySnowTuning, updateSnow } from './snow.js';
 import { jingle } from './audio.js';
 import { addGrain, applyGrainTuning, updateGrain } from './grain.js';
@@ -21,6 +21,8 @@ scene.add(hero);
 scene.add(snow);
 addGrain(world);
 addGrain(hero, { onPlanet: false });
+// Gingerbread Land is on the far side, so it loads after the winter village, as its own chunk.
+import('./world/gingerbread.js').then(({ buildGingerbreadLand }) => buildGingerbreadLand());
 
 function applyTuning() {
   applySnowTuning();
@@ -55,6 +57,7 @@ function loop(t) {
   updatePlayer(dt, t);
   updateDaylight();
   updateCamera();
+  updateHorizon(viewFrom);
   updateSnow(dt);
   updateBell(dt);
   updateGrain();

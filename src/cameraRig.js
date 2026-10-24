@@ -46,6 +46,8 @@ export function toggleView() {
 const orbit = new THREE.Quaternion(), spin = new THREE.Quaternion(), home = new THREE.Quaternion();
 const axis = new THREE.Vector3(), UP = new THREE.Vector3(0, 0, 1);
 const canOrbit = () => targetZoom >= ZOOM.orbit;
+// The point on the planet the view is centred over: the explorer's spot (+Z) until the camera orbits.
+export const viewFrom = new THREE.Vector3(0, 0, 1);
 let drag = null, returning = false;
 
 renderer.domElement.addEventListener('pointerdown', e => {
@@ -100,6 +102,7 @@ export function updateCamera() {
   camera.position.applyQuaternion(orbit);
   focus.applyQuaternion(orbit);
   camera.up.copy(UP).applyQuaternion(orbit);
+  viewFrom.copy(UP).applyQuaternion(orbit);
   camera.lookAt(focus);
   lights.quaternion.copy(orbit);
 }
