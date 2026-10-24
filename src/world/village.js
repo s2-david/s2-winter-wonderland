@@ -1,5 +1,5 @@
 import { R } from '../config.js';
-import { placeBlocked, placeOnSnow } from './planet.js';
+import { placeBlocked, placeOnSnow, horizonGroup } from './planet.js';
 import { makeTree, treeReach, makeCobble } from './props.js';
 import { placeHouses } from './houses.js';
 import { BELL_SPOT } from './bell.js';
@@ -35,7 +35,7 @@ export function buildVillage() {
   placeHouses([
     ...inner.map(([design, wall, light], i) => ({ design, wall, light, ...aroundBell(15, innerAngles[i]), facing: BELL_SPOT })),
     ...outer.map(([design, wall, light, angle]) => ({ design, wall, light, ...aroundBell(28, angle), facing: BELL_SPOT })),
-  ]);
+  ], horizonGroup(...BELL_SPOT, 32)); // hidden from the far side of the planet
 
   // Trees: a ring of mixed shapes around the village, and a pair flanking the road where it enters each side.
   for (let k = 0; k < 16; k++) {
