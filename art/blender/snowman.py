@@ -28,7 +28,7 @@ scene = bpy.context.scene
 # ---------------------------------------------------------------- colours (from player.js)
 
 COAL, CHEEK, CARROT, WOOD = "#2e2a2b", "#f4b096", "#f2780f", "#7a4a2c"
-KNIT = "#a7c4e6"  # powder blue, shared by the beanie and the scarf
+WOOL, HAT, HOLLY, BERRY = "#d8403a", "#3a3536", "#4c8a3f", "#c8282b"
 SNOW_TONES = ["#fcf9f3", "#f6eedf", "#f1e5cf", "#e9ecee"]
 
 def srgb(hex_):
@@ -144,24 +144,6 @@ def tube(points, radius, sides=4):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return bm
 
-def lathe(profile, sides, ribs=0.0, closed=False):
-    """Rings of `sides` corners turned around Y through (radius, y) points. Every other column is pulled
-    in by `ribs`, so flat shading reads as a ribbed knit. A `closed` profile joins its last ring back to
-    its first (a ring with a round cross-section); an open one is capped at both ends."""
-    bm = bmesh.new()
-    rings = [[bm.verts.new((r * (1 - ribs * (i % 2)) * math.sin(2 * math.pi * i / sides), y,
-                            r * (1 - ribs * (i % 2)) * math.cos(2 * math.pi * i / sides))) for i in range(sides)]
-             for r, y in profile]
-    pairs = list(zip(rings, rings[1:])) + ([(rings[-1], rings[0])] if closed else [])
-    for a, b in pairs:
-        for i in range(sides):
-            j = (i + 1) % sides
-            bm.faces.new((a[i], a[j], b[j], b[i]))
-    if not closed:
-        bm.faces.new(list(reversed(rings[0]))); bm.faces.new(rings[-1])
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    return bm
-
 def rand_dir():
     v = Vector((random.gauss(0, 1), random.gauss(0, 1), random.gauss(0, 1)))
     return v.normalized()
@@ -270,27 +252,15 @@ NOSE_LEN, NOSE_TURN = 0.17, 0.25
 nose_pos = Vector((math.sin(NOSE_TURN), 0, math.cos(NOSE_TURN))) * (NOSE_LEN / 2) + Vector((0, 0, 0.192))
 card("Carrot", cylinder(0.002, 0.034, NOSE_LEN, 6, 3), CARROT, 0.1, face, nose_pos, (math.pi / 2, 0, -NOSE_TURN))
 
-# A chunky knit beanie: a puffy crown that bulges a little past the head, and an oversized folded cuff
-# whose cross-section is a pill (round top and bottom edges), sitting just over the eyes. Alternate
-# columns are pulled in so the facets read as fine vertical ribs.
-def pill(inner, outer, bottom, top, steps=4):
-    rr = (outer - inner) / 2
-    arc = lambda cy, a0: [(inner + rr + rr * math.cos(a0 + math.pi * i / steps), cy + rr * math.sin(a0 + math.pi * i / steps))
-                          for i in range(steps + 1)]
-    return arc(bottom + rr, math.pi) + arc(top - rr, 0)
-
-# The grooves between ribs are shaded darker, so the knit reads as stripes rather than random facets.
-def groove_shade(sides):
-    def light(v):
-        column = round(math.atan2(v.x, v.z) / (2 * math.pi / sides)) % sides
-        return 0.86 if column % 2 else 1.0
-    return light
-
-beanie = group("Beanie", face, rot=(-0.05, 0, 0.06))
-card("Crown", lathe([(0.19, 0.14), (0.212, 0.19), (0.206, 0.25), (0.176, 0.3), (0.122, 0.34), (0.05, 0.36)], 24,
-                    ribs=0.04), KNIT, 0.015, beanie, light=groove_shade(24))
-card("Cuff", lathe(pill(0.19, 0.258, 0.055, 0.168), 32, ribs=0.05, closed=True), KNIT, 0.015, beanie,
-     light=groove_shade(32))
+hat = group("Hat", face, (0, 0.11, 0), (-0.08, 0, 0.12))
+card("Brim", cylinder(0.27, 0.27, 0.025, 10), HAT, 0.06, hat)
+card("Crown", cylinder(0.15, 0.165, 0.24, 8), HAT, 0.08, hat, (0, 0.13, 0))
+card("Band", cylinder(0.168, 0.17, 0.055, 8), WOOL, 0.08, hat, (0, 0.045, 0))
+for side in (-1, 1):
+    card("Holly", octa(0.035), HOLLY, 0.12, hat, (-0.08 + side * 0.03, 0.09, 0.15), (-0.3, 0, side * 0.7),
+         (0.55, 1.4, 0.25))
+for x, y in ((-0.095, 0.05), (-0.07, 0.045), (-0.083, 0.068)):
+    card("Berry", ico(0.017), BERRY, 0.1, hat, (x, y, 0.17))
 
 # Three coal buttons, each seated on the body facet in front of it and turned to lie flat on it.
 bpy.context.view_layer.update()
@@ -308,10 +278,10 @@ for i, side in enumerate((-1, 1)):
     for y, bend in ((0.24, 0.7), (0.3, -0.55)):
         card("Twig", cylinder(0.009, 0.014, 0.11, 4, y0=0), WOOD, 0.08, arm, (0, y, 0), (0, 0, side * bend))
 
-# A powder-blue scarf to match the beanie, round the neck, with a tail of two folded panels down the front.
-card("Scarf", torus(0.17, 0.05, 4, 12), KNIT, 0.1, body, (0, 0.43, 0), (math.pi / 2, 0, 0))
+# Red scarf round the neck, with a tail of two folded panels down the front.
+card("Scarf", torus(0.17, 0.05, 4, 12), WOOL, 0.1, body, (0, 0.43, 0), (math.pi / 2, 0, 0))
 for y, z, length, tilt in ((0.335, 0.242, 0.18, 0.59), (0.18, 0.34, 0.186, 0.54)):
-    card("ScarfTail", box(0.095, length, 0.02), KNIT, 0.1, body, (-0.07, y, z), (-tilt, -0.2, 0))
+    card("ScarfTail", box(0.095, length, 0.02), WOOL, 0.1, body, (-0.07, y, z), (-tilt, -0.2, 0))
 
 # ---------------------------------------------------------------- stage
 
