@@ -1,13 +1,11 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { placeBlocked, point, horizonGroup } from './planet.js';
-import { addGrain } from '../grain.js';
-import gingerbreadUrl from './models/gingerbread.glb?url';
+import { renderer } from '../stage.js';
+import { loadGingerbread } from './gingerbreadLook.js';
 
 // Gingerbread Land: the second village, on the sunny far side of the planet, straight opposite the
 // winter village. A cluster of gingerbread houses, tall and small, around a steeple, with gingerbread
-// trees and candy along the paths. Models come from art/blender/gingerbread.py. main.js loads this
+// trees and candy along the paths. Models and materials come from gingerbreadLook.js. main.js loads this
 // module on its own, so its code and model download after the winter village is up.
 export const GINGER_SPOT = [0, 180]; // lat, lon
 const MODEL_SCALE = 0.55;
@@ -85,9 +83,6 @@ function spot({ key, lat, lon, facing, yaw, scale = 1 }, rand) {
   return anchor.matrix;
 }
 
-// Small candy pieces cast no shadow: it would cost a second draw of every one for barely visible dots.
-const NO_SHADOW = ['CandyCane', 'Lollipop', 'Gumdrops'];
-
 function instanced(geometry, material, matrices, colors, shadow) {
   const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
   matrices.forEach((m, i) => {
@@ -97,10 +92,8 @@ function instanced(geometry, material, matrices, colors, shadow) {
   mesh.computeBoundingSphere();
   mesh.castShadow = shadow;
   mesh.receiveShadow = true;
-  addGrain(mesh);
   land.add(mesh);
 }
-
 
 export function buildGingerbreadLand() {
   let seed = 23;
@@ -109,25 +102,15 @@ export function buildGingerbreadLand() {
   const { houses, props } = layout();
   const placed = [...houses, ...props].map(item => ({ ...item, matrix: spot(item, rand) }));
 
-  const draco = new DRACOLoader().setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
-  new GLTFLoader().setDRACOLoader(draco).load(gingerbreadUrl, ({ scene: model }) => {
-    model.updateMatrixWorld(true);
-    // The baked colour reads muddy under the planet's sun and tone mapping, so the gingerbread is
-    // warmed and brightened here (frosting is tinted per house instead).
-    model.getObjectByName('Cottage_Body').material.color.setRGB(1.3, 1.15, 1.0);
-    // One instanced mesh per model part, so the whole village is a couple of dozen draw calls.
-    for (const key of Object.keys(RADIUS)) {
+  // One instanced mesh per model and kind of surface, so every copy of a model shares a few draw calls.
+  loadGingerbread(renderer).then(models => {
+    for (const [key, parts] of models) {
       const mine = placed.filter(item => item.key === key);
       if (!mine.length) continue;
-      for (const part of ['Body', 'Frosting']) {
-        const mesh = model.getObjectByName(`${key}_${part}`);
-        if (!mesh?.isMesh) continue;
-        const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
-        instanced(geometry, mesh.material, mine.map(item => item.matrix),
-          // Frosting sits on a gingerbread roof that already casts the same shadow.
-          part === 'Frosting' ? mine.map(item => FROST[item.frost]) : null, part === 'Body' && !NO_SHADOW.includes(key));
+      for (const { kind, geometry, material, castShadow } of parts) {
+        instanced(geometry, material, mine.map(item => item.matrix),
+          kind === 'Frosting' ? mine.map(item => FROST[item.frost]) : null, castShadow);
       }
     }
-    draco.dispose();
   });
 }

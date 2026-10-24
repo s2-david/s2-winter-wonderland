@@ -23,9 +23,6 @@ ap.add_argument("--export", default="", help="write every design and prop as one
 ap.add_argument("--bake-size", type=int, default=2048)
 args = ap.parse_args(argv)
 HERE = os.path.dirname(os.path.abspath(__file__))
-# The web export uses four-sided icing tubes (smooth-shaded they still read as round at planet size),
-# which halves the piping, about half of every house's triangles.
-WEB = bool(args.export)
 
 random.seed(7)
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -155,35 +152,38 @@ def mat(name, color, rough=0.7, sss=0.0, coat=0.0, emit=None, strength=0.0):
         b.inputs["Emission Strength"].default_value = strength
     return m
 
-# Gingerbread, in linear colour: a warm toasted brown, lighter where the dough puffed up, darker at
-# the baked edges and in the little pits and spice specks.
-GB = (0.30, 0.11, 0.030)
-GB_LIGHT = (0.60, 0.29, 0.10)
-GB_DARK = (0.10, 0.030, 0.008)
+# Baked ginger dough, in linear colour: a warm golden brown with gentle oven variation, tiny air pores,
+# and edges that baked darker and rounder. Kept clean on purpose: heavy mottling reads as dirty cardboard.
+GB = (0.42, 0.15, 0.040)
+GB_LIGHT = (0.62, 0.29, 0.085)
+GB_EDGE = (0.26, 0.085, 0.020)
+GB_DARK = (0.13, 0.040, 0.010)
 
-def gingerbread_mat(name, base=GB, light=GB_LIGHT, dark=GB_DARK):
-    m = mat(name, base, rough=0.8)
+def gingerbread_mat(name, base=GB, light=GB_LIGHT, edge_col=GB_EDGE, dark=GB_DARK):
+    m = mat(name, base, rough=0.5)
     N, L = m.node_tree.nodes, m.node_tree.links
     co = obj_co(N)
-    puff = tex_noise(N, L, co, 1.7, 3)              # oven colour, uneven rise of the dough
-    mottle = tex_noise(N, L, co, 9, 5, 0.6)         # blotchy browning
-    crumb = tex_noise(N, L, co, 45, 8, 0.7)         # fine crumb
-    vo = N.new("ShaderNodeTexVoronoi"); L.new(co, vo.inputs["Vector"])
-    vo.inputs["Scale"].default_value = 30; vo.inputs["Randomness"].default_value = 1.0
-    pit = remap(N, L, vo.outputs["Distance"], 0.04, 0.12, 1.0, 0.0, smooth=True)  # small round air pits
-    col = mix_rgb(N, L, remap(N, L, puff, 0.36, 0.64), base, light)
-    col = mix_rgb(N, L, remap(N, L, mottle, 0.45, 0.7, 0.0, 0.35), col, dark)
-    col = mix_rgb(N, L, remap(N, L, crumb, 0.5, 0.25, 0.0, 0.35), col, dark)
-    col = mix_rgb(N, L, op(N, L, "MULTIPLY", pit, 0.65), col, dark)
+    oven = tex_noise(N, L, co, 1.2, 2)              # where the oven ran hotter or cooler
+    rise = tex_noise(N, L, co, 6, 3)                # soft unevenness of the risen dough
+    crumb = tex_noise(N, L, co, 80, 6, 0.6)         # fine texture, felt more than seen
+    pores = N.new("ShaderNodeTexVoronoi"); L.new(co, pores.inputs["Vector"])
+    pores.inputs["Scale"].default_value = 55
+    pore = remap(N, L, pores.outputs["Distance"], 0.03, 0.07, 1.0, 0.0, smooth=True)
+    bubbles = N.new("ShaderNodeTexVoronoi"); L.new(co, bubbles.inputs["Vector"])
+    bubbles.inputs["Scale"].default_value = 12
+    bubble = remap(N, L, bubbles.outputs["Distance"], 0.025, 0.05, 1.0, 0.0, smooth=True)
+    col = mix_rgb(N, L, remap(N, L, oven, 0.35, 0.65, 0.0, 0.7), base, light)
+    col = mix_rgb(N, L, remap(N, L, rise, 0.4, 0.7, 0.0, 0.18), col, edge_col)
+    col = mix_rgb(N, L, op(N, L, "MULTIPLY", op(N, L, "MAXIMUM", pore, bubble), 0.45), col, dark)
     # Baked edges: where a rounded (bevel) normal turns away from the flat face normal, the dough browned.
-    bev = N.new("ShaderNodeBevel"); bev.inputs["Radius"].default_value = 0.08
+    bev = N.new("ShaderNodeBevel"); bev.inputs["Radius"].default_value = 0.06
     geo = N.new("ShaderNodeNewGeometry")
-    edge = remap(N, L, vop(N, L, "DOT_PRODUCT", bev.outputs["Normal"], geo.outputs["True Normal"]), 0.995, 0.8, smooth=True)
-    col = mix_rgb(N, L, op(N, L, "MULTIPLY", edge, 0.85), col, dark)
+    edge = remap(N, L, vop(N, L, "DOT_PRODUCT", bev.outputs["Normal"], geo.outputs["True Normal"]), 0.995, 0.85, smooth=True)
+    col = mix_rgb(N, L, op(N, L, "MULTIPLY", edge, 0.8), col, edge_col)
     L.new(col, N["Principled BSDF"].inputs["Base Color"])
-    height = op(N, L, "MULTIPLY_ADD", puff, 0.6, op(N, L, "MULTIPLY_ADD", mottle, 0.3,
-                op(N, L, "MULTIPLY_ADD", crumb, 0.6, op(N, L, "MULTIPLY", pit, -0.8))))
-    add_bump(m, height, 0.7, 0.015)
+    height = op(N, L, "MULTIPLY_ADD", rise, 0.5, op(N, L, "MULTIPLY_ADD", crumb, 0.12,
+                op(N, L, "MULTIPLY", op(N, L, "MAXIMUM", pore, bubble), -0.6)))
+    add_bump(m, height, 0.4, 0.012)
     return m
 
 def icing_mat(name, color=(0.86, 0.84, 0.80)):
@@ -276,8 +276,8 @@ FROST_NEUTRAL = (0.86, 0.86, 0.86)
 
 M = dict(
     ginger=gingerbread_mat("Gingerbread"),
-    ginger_dark=gingerbread_mat("GingerbreadDark", base=(0.22, 0.08, 0.022), light=(0.32, 0.12, 0.035),
-                                dark=(0.08, 0.025, 0.007)),
+    ginger_dark=gingerbread_mat("GingerbreadDark", base=(0.26, 0.085, 0.022), light=(0.36, 0.13, 0.035),
+                                edge_col=(0.15, 0.045, 0.011), dark=(0.08, 0.025, 0.007)),
     icing=icing_mat("Icing"),
     choc=chocolate_mat(),
     cane=stripe_mat("CaneStripe", WHITE, CANDY["cherry"], "diag", 7.0),
@@ -312,20 +312,19 @@ def densify(pts, step, closed=False):
     if not closed: out.append(pts[-1])
     return out
 
-def pipe(name, pts, parent=None, r=0.02, closed=False, m=None, wobble=0.004, step=0.14):
-    """A line of piped icing: a round tube along `pts`, a little uneven like it was squeezed by hand."""
+def pipe(name, pts, parent=None, r=0.02, closed=False, m=None, wobble=0.0015, step=0.1):
+    """A line of piped icing: a smooth round tube along `pts`, steady like a practised hand piped it."""
     pts = densify(pts, step, closed)
     cu = bpy.data.curves.new(name, "CURVE"); cu.dimensions = "3D"
-    cu.bevel_depth = r; cu.bevel_resolution = 0 if WEB else 1; cu.use_fill_caps = True
+    cu.bevel_depth = r; cu.bevel_resolution = 1; cu.use_fill_caps = True
     sp = cu.splines.new("POLY"); sp.points.add(len(pts) - 1)
     for p, co in zip(sp.points, pts):
         p.co = (*(co + Vector([random.uniform(-wobble, wobble) for _ in range(3)])), 1)
-        p.radius = random.uniform(0.85, 1.15) if wobble else 1.0
     sp.use_cyclic_u = closed
     cu.materials.append(m or M["icing"])
     return link(bpy.data.objects.new(name, cu), parent)
 
-def scallop(a, b, n, depth, k=4):
+def scallop(a, b, n, depth, k=6):
     """Points along a→b that dip down in `n` arcs, the classic piped garland."""
     a, b = Vector(a), Vector(b)
     pts = []
@@ -386,7 +385,7 @@ def drips(parent, a, b, step=0.2, length=(0.05, 0.16), r=0.035):
     for k in range(n + 1):
         p = a.lerp(b, k / n) + Vector((random.uniform(-.01, .01), random.uniform(-.01, .01), 0))
         ln = random.uniform(*length)
-        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=5 if WEB else 6, v_segments=3 if WEB else 4, radius=1)
+        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=6, v_segments=4, radius=1)
         for v in bm.verts:  # a teardrop: full at the bottom, thin where it leaves the edge
             t = (v.co.z + 1) / 2
             w = r * (1.0 - 0.45 * t)
@@ -403,7 +402,7 @@ def on_face(root, face, u, z, W, D):
     r = FACES[face]
     return empty(face, (math.sin(r) * dist + math.cos(r) * u, -math.cos(r) * dist + math.sin(r) * u, z), r, root)
 
-def outline(style, w, h, n=6):
+def outline(style, w, h, n=8):
     """Window or door shape in the wall's plane (x along the wall, z up), centred on (0, 0), counter-clockwise."""
     if style == "round":
         return [(w / 2 * math.cos(math.pi * k / n), w / 2 * math.sin(math.pi * k / n)) for k in range(2 * n)]
@@ -452,7 +451,7 @@ def house(name, loc, W, D, Hw, rise, roof="gable", frost="white", windows=(), do
     root = empty(name, loc, rz + turn)
     color = FROST_NEUTRAL if neutral else FROST[frost]
     B0 = 0.14  # gingerbread footing
-    box("Footing", (0, 0, B0 / 2), (W + 0.14, D + 0.14, B0), M["ginger_dark"], root, bev=0.02, jit=0.008)
+    box("Footing", (0, 0, B0 / 2), (W + 0.14, D + 0.14, B0), M["ginger_dark"], root, bev=0.03, segs=3, jit=0.008)
     top, ridge = B0 + Hw, B0 + Hw + (rise if roof == "gable" else 0)
     prof = [(-W / 2, B0), (W / 2, B0), (W / 2, top)] + ([(0, ridge)] if roof == "gable" else []) + [(-W / 2, top)]
     bm = bmesh.new()
@@ -464,7 +463,7 @@ def house(name, loc, W, D, Hw, rise, roof="gable", frost="white", windows=(), do
         bm.faces.new((fr[k], fr[k2], bk[k2], bk[k]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     jitter(bm, 0.008)  # cookie panels never come out of the oven perfectly square
-    bevel(from_bm("Walls", bm, M["ginger"], parent=root), 0.025, 2)
+    bevel(from_bm("Walls", bm, M["ginger"], parent=root), 0.035, 3)  # puffed, rounded baked edges
 
     # Icing "glue" down every corner, as on a real gingerbread house.
     for sx in (1, -1):
@@ -492,7 +491,7 @@ def house(name, loc, W, D, Hw, rise, roof="gable", frost="white", windows=(), do
             nv = Vector((s * math.sin(a), math.cos(a)))
             t0, t1 = -tR * math.tan(a), L
             c = rp + dv * ((t0 + t1) / 2) + nv * (tR / 2)
-            box("Roof", (c.x, 0, c.y), (t1 - t0, Ly, tR), M["ginger"], root, rot=(0, s * a, 0), bev=0.015)
+            box("Roof", (c.x, 0, c.y), (t1 - t0, Ly, tR), M["ginger"], root, rot=(0, s * a, 0), bev=0.025, segs=3)
             f0, f1 = -(tR + tF) * math.tan(a), L + 0.03
             c = rp + dv * ((f0 + f1) / 2) + nv * (tR + tF / 2)
             soft(box("Frosting", (c.x, 0, c.y), (f1 - f0, Ly + 0.04, tF), frosting(color, "+x" if s > 0 else "-x"), root,
@@ -796,16 +795,19 @@ def use_local_coords():
                 L.new(attr.outputs["Vector"], ln.to_socket)
 
 def bake_into(obj, kind, size, samples, non_color=False):
-    img = bpy.data.images.new(f"bake_{kind}", size, size, float_buffer=True)
+    """Bakes into an RGBA array; alpha is 1 where something was baked and 0 in the gaps between islands."""
+    import numpy as np
+    img = bpy.data.images.new(f"bake_{kind}", size, size, float_buffer=True, alpha=True)
+    img.pixels.foreach_set(np.zeros(size * size * 4, dtype=np.float32))
     if non_color: img.colorspace_settings.name = "Non-Color"
     for m in obj.data.materials:
         tex = m.node_tree.nodes.new("ShaderNodeTexImage"); tex.image = img
         m.node_tree.nodes.active = tex
     scene.cycles.samples = samples
     with bpy.context.temp_override(active_object=obj, selected_objects=[obj]):
-        if kind == "DIFFUSE": bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, margin=6)
-        elif kind == "NORMAL": bpy.ops.object.bake(type="NORMAL", normal_space="TANGENT", margin=6)
-        else: bpy.ops.object.bake(type=kind, margin=6)
+        if kind == "DIFFUSE": bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, margin=8)
+        elif kind == "NORMAL": bpy.ops.object.bake(type="NORMAL", normal_space="TANGENT", margin=8)
+        else: bpy.ops.object.bake(type=kind, margin=8)
     import numpy as np
     px = np.empty(size * size * 4, dtype=np.float32); img.pixels.foreach_get(px)
     return px.reshape(-1, 4)
@@ -818,7 +820,7 @@ def save_image(name, rgb, size, path, non_color=False):
     img.file_format = "PNG"; img.filepath_raw = path; img.save()
     return img
 
-def baked_mat(name, color, normal, orm):
+def baked_mat(name, color, normal=None):
     m = bpy.data.materials.new(name)
     try: m.use_nodes = True
     except Exception: pass
@@ -826,19 +828,64 @@ def baked_mat(name, color, normal, orm):
     b = N["Principled BSDF"]
     tc = N.new("ShaderNodeTexImage"); tc.image = color
     L.new(tc.outputs["Color"], b.inputs["Base Color"])
-    tn = N.new("ShaderNodeTexImage"); tn.image = normal
-    nm = N.new("ShaderNodeNormalMap"); L.new(tn.outputs["Color"], nm.inputs["Color"])
-    L.new(nm.outputs["Normal"], b.inputs["Normal"])
-    tr = N.new("ShaderNodeTexImage"); tr.image = orm
-    sep = N.new("ShaderNodeSeparateColor"); L.new(tr.outputs["Color"], sep.inputs[0])
-    L.new(sep.outputs["Green"], b.inputs["Roughness"])
-    b.inputs["Metallic"].default_value = 0.0
+    if normal:
+        tn = N.new("ShaderNodeTexImage"); tn.image = normal
+        nm = N.new("ShaderNodeNormalMap"); L.new(tn.outputs["Color"], nm.inputs["Color"])
+        L.new(nm.outputs["Normal"], b.inputs["Normal"])
     return m
 
+# Every model is exported as one mesh per kind of surface, so the browser can shade each its own way:
+# matte-glossy dough, glossy icing, hard shiny candy, sugared gumdrops, glowing candy-glass windows, and
+# roof frosting it tints per house. Dough, frosting, candy stripes and windows carry the fine detail, so
+# they get a texture sheet of their own (colour, soft shadow, bump); icing and gumdrops are plain
+# colours that only need soft shadow, so they share a smaller sheet. Kept apart, the thousands of little
+# icing pieces no longer crowd the dough.
+CLASSES = ["Dough", "Frosting", "Icing", "Candy", "Gumdrop", "Glass"]
+SHEETS = {"dough": ["Dough", "Frosting", "Candy", "Glass"], "trim": ["Icing", "Gumdrop"]}
+
+def shading_class(material_name):
+    if material_name.startswith(("Gingerbread", "Chocolate")): return "Dough"  # chocolate wants the same soft sheen
+    if material_name.startswith("Frosting"): return "Frosting"
+    if material_name.startswith(("Icing", "Stick")): return "Icing"
+    if material_name.startswith("Gum_"): return "Gumdrop"
+    if material_name.startswith("Candyglass"): return "Glass"
+    return "Candy"  # stripes, peppermints, lollipops, the star
+
+def faces_only(name, src, tags, keep, mats):
+    """A new object holding the faces of `src` whose tag passes `keep`."""
+    bm = bmesh.new(); bm.from_mesh(src.data)
+    bm.faces.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[f for f, t in zip(bm.faces, tags) if not keep(t)], context="FACES")
+    ob = from_bm(name, bm, mats)
+    return ob
+
+def unwrap(ob, margin):
+    for o in scene.objects: o.select_set(False)
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=margin)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+def fill_gaps(px, rgb):
+    """Gaps between islands take `rgb` (default: the average baked colour) instead of black. Tiny islands,
+    like an icing dot, share their texels with the gaps once the texture is shrunk for distance, so
+    black gaps would turn them dark."""
+    import numpy as np
+    baked = px[:, 3] > 0.5
+    out = px[:, :3].copy()
+    out[~baked] = rgb if rgb is not None else out[baked].mean(axis=0)
+    return out
+
+def shaded(albedo, ao, floor):
+    import numpy as np
+    lin = np.clip(fill_gaps(albedo, None) * (floor + (1 - floor) * fill_gaps(ao, (1, 1, 1))[:, :1]), 0, 1)
+    return np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
+
 def export_all(path):
-    """Every design and prop in one GLB. Per design: <Key>_Body (baked colour, AO, normal and roughness)
-    and <Key>_Frosting (the same textures, roof icing baked near-white so the browser can tint it per
-    house). Props have only a body. Everything shares one set of textures."""
+    """Every design and prop in one GLB, as <Key>_<Class> meshes (see CLASSES). Frosting is baked
+    near-white so the browser can tint it per house."""
     import numpy as np
     keys = list(DESIGNS) + list(PROPS)
     offsets = {k: Vector((i * 8.0, 0, 0)) for i, k in enumerate(keys)}
@@ -852,65 +899,76 @@ def export_all(path):
             if ob.type not in ("MESH", "CURVE"): continue
             me = mesh_copy(ob, dg)  # keeps the offset while baking so designs don't touch
             copy = link(bpy.data.objects.new(ob.name, me))
-            # Tag every face with its design and whether it's tintable frosting, to split after baking.
-            frost = [me.materials[p.material_index].name.startswith("Frosting") for p in me.polygons]
+            # Tag every face with its model and shading class, to split after baking.
+            cls = [CLASSES.index(shading_class(me.materials[p.material_index].name)) for p in me.polygons]
             attr = me.attributes.new("part", "INT", "FACE")
-            attr.data.foreach_set("value", [keys.index(k) * 2 + int(f) for f in frost])
+            attr.data.foreach_set("value", [keys.index(k) * len(CLASSES) + c for c in cls])
             parts.append(copy)
     for ob in list(scene.objects):
         if ob not in parts: bpy.data.objects.remove(ob)
 
     use_local_coords()
-    atlas = join("Atlas", parts)
-    bpy.context.view_layer.objects.active = atlas
-    atlas.select_set(True)
+    whole = join("Whole", parts)
+    bpy.context.view_layer.objects.active = whole
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     # Triangles before baking, so the normal map's tangents match the ones computed at export.
     bpy.ops.mesh.quads_convert_to_tris(quad_method="BEAUTY", ngon_method="BEAUTY")
-    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.002)
     bpy.ops.object.mode_set(mode="OBJECT")
+    tags = [0] * len(whole.data.polygons)
+    whole.data.attributes["part"].data.foreach_get("value", tags)
+    mats = list(whole.data.materials)
+    sheets = {}
+    for sheet, classes in SHEETS.items():
+        idx = [CLASSES.index(c) for c in classes]
+        sheets[sheet] = faces_only(sheet, whole, tags, lambda t: t % len(CLASSES) in idx, mats)
+    bpy.data.objects.remove(whole)
+    # Nobody sees the undersides resting on the ground; leaving them out gives the dough more texture.
+    bm = bmesh.new(); bm.from_mesh(sheets["dough"].data)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.normal.z < -0.7 and f.calc_center_median().z < 0.03], context="FACES")
+    bm.to_mesh(sheets["dough"].data); bm.free()
+    unwrap(sheets["dough"], 0.003)
+    unwrap(sheets["trim"], 0.004)
 
     bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=60)
     ground_ob = from_bm("BakeGround", bm, M["sugar"])
     size = args.bake_size
-    albedo = bake_into(atlas, "DIFFUSE", size, 1)
-    ao = bake_into(atlas, "AO", size, 128)
-    normal = bake_into(atlas, "NORMAL", size, 4, non_color=True)
-    rough = bake_into(atlas, "ROUGHNESS", size, 1, non_color=True)
-    bpy.data.objects.remove(ground_ob)
-    lin = np.clip(albedo[:, :3] * (0.35 + 0.65 * ao[:, :1]), 0, 1)
-    srgb = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
     os.makedirs(os.path.join(HERE, "renders"), exist_ok=True)
-    color_img = save_image("GingerColor", srgb, size, os.path.join(HERE, "renders", "gingerbread_atlas.png"))
-    normal_img = save_image("GingerNormal", normal[:, :3], size, os.path.join(HERE, "renders", "gingerbread_normal.png"), True)
-    orm = np.stack([np.ones(size * size), rough[:, 0], np.zeros(size * size)], axis=1)  # glTF: G roughness, B metal
-    orm_img = save_image("GingerRough", orm, size, os.path.join(HERE, "renders", "gingerbread_rough.png"), True)
-    body_mat = baked_mat("GingerBody", color_img, normal_img, orm_img)
-    frost_mat = baked_mat("GingerFrosting", color_img, normal_img, orm_img)
+    out_path = lambda n: os.path.join(HERE, "renders", n)
+    dough = sheets["dough"]
+    dough_color = save_image("DoughColor", shaded(bake_into(dough, "DIFFUSE", size, 1), bake_into(dough, "AO", size, 128), 0.5),
+                             size, out_path("gingerbread_dough.png"))
+    dough_normal = save_image("DoughNormal", fill_gaps(bake_into(dough, "NORMAL", size, 4, non_color=True), (0.5, 0.5, 1.0)), size,
+                              out_path("gingerbread_dough_normal.png"), True)
+    trim, tsize = sheets["trim"], size // 2
+    trim_color = save_image("TrimColor", shaded(bake_into(trim, "DIFFUSE", tsize, 1), bake_into(trim, "AO", tsize, 128), 0.4),
+                            tsize, out_path("gingerbread_trim.png"))
+    bpy.data.objects.remove(ground_ob)
+    final = {c: baked_mat(f"Ginger{c}", dough_color, dough_normal) for c in SHEETS["dough"]}
+    final.update({c: baked_mat(f"Ginger{c}", trim_color) for c in SHEETS["trim"]})
 
-    tags = [0] * len(atlas.data.polygons)
-    atlas.data.attributes["part"].data.foreach_get("value", tags)
     out = []
-    for i, k in enumerate(keys):
-        for frost in (0, 1):
-            if i * 2 + frost not in tags: continue
-            bm = bmesh.new(); bm.from_mesh(atlas.data)
-            bm.faces.ensure_lookup_table()
-            bmesh.ops.delete(bm, geom=[f for f, t in zip(bm.faces, tags) if t != i * 2 + frost], context="FACES")
-            bmesh.ops.translate(bm, vec=-offsets[k], verts=bm.verts)
-            ob = from_bm(f"{k}_{'Frosting' if frost else 'Body'}", bm, frost_mat if frost else body_mat)
-            for p in ob.data.polygons: p.material_index = 0
-            for name in ("lco", "part"):
-                if name in ob.data.attributes: ob.data.attributes.remove(ob.data.attributes[name])
-            out.append(ob)
-    bpy.data.objects.remove(atlas)
+    for sheet, classes in SHEETS.items():
+        src = sheets[sheet]
+        stags = [0] * len(src.data.polygons)
+        src.data.attributes["part"].data.foreach_get("value", stags)
+        for i, k in enumerate(keys):
+            for c in classes:
+                tag = i * len(CLASSES) + CLASSES.index(c)
+                if tag not in stags: continue
+                ob = faces_only(f"{k}_{c}", src, stags, lambda t: t == tag, [final[c]])
+                for p in ob.data.polygons: p.material_index = 0
+                ob.data.transform(Matrix.Translation(-offsets[k]))
+                for name in ("lco", "part"):
+                    if name in ob.data.attributes: ob.data.attributes.remove(ob.data.attributes[name])
+                out.append(ob)
+        bpy.data.objects.remove(src)
 
     for o in out:
         print(f"EXPORT {o.name}: {sum(len(p.vertices) - 2 for p in o.data.polygons)} triangles")
     print(f"EXPORT total={sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in out)}")
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_apply=True, export_tangents=True,
-                              export_image_format="WEBP", export_image_quality=82,
+                              export_image_format="WEBP", export_image_quality=88,
                               export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=7,
                               export_yup=True, export_lights=False, export_cameras=False)
 
