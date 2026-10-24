@@ -50,7 +50,7 @@ export function setDaylight(amount) {
 }
 
 // Each light value runs from its night tuning to its day tuning as the explorer walks into daylight.
-const blend = (night, day) => THREE.MathUtils.lerp(night, day, daylight);
+export const blend = (night, day) => THREE.MathUtils.lerp(night, day, daylight);
 
 // The explorer stands at the top of the planet (+Z), so the sun's height and direction are measured
 // from there: height in degrees above the horizon, direction in degrees around it.

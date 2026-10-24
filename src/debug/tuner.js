@@ -36,6 +36,14 @@ const controls = [
   { key: 'daySkyWarmth', label: 'Sky warmth', min: 0, max: 1, step: 0.01, format: v => v.toFixed(2) },
   { key: 'dayMoonStrength', label: 'Moon', min: 0, max: 3, step: 0.05, format: v => v.toFixed(2) },
   { key: 'dayExposure', label: 'Exposure', min: 0.3, max: 2.5, step: 0.01, format: v => v.toFixed(2) },
+  { key: 'dayBloom', label: 'Glow', min: 0, max: 4, step: 0.05, format: v => v.toFixed(2) },
+  { key: 'dayVignette', label: 'Vignette', min: 0, max: 1, step: 0.01, format: v => v.toFixed(2) },
+  { heading: 'Lens' },
+  { key: 'postQuality', label: 'Quality', min: 0, max: 2, step: 1, format: v => ['Off', 'No tilt-shift', 'Full'][v] },
+  { key: 'bloom', label: 'Glow', min: 0, max: 4, step: 0.05, format: v => v.toFixed(2) },
+  { key: 'vignette', label: 'Vignette', min: 0, max: 1, step: 0.01, format: v => v.toFixed(2) },
+  { key: 'tiltShift', label: 'Tilt-shift', min: 0, max: 1, step: 0.01, format: v => v.toFixed(2) },
+  { key: 'tiltFocus', label: 'Focus band', min: 0.1, max: 1, step: 0.01, format: v => v.toFixed(2) },
 ];
 
 // Lucide "sliders-horizontal" icon (ISC license, lucide.dev)
