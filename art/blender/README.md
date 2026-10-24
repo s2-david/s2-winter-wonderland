@@ -43,7 +43,7 @@ The four designs total about 30,000 triangles in a ~770 kB GLB. `src/world/house
 /Applications/Blender.app/Contents/MacOS/Blender -b -P gingerbread.py -- --export ../../src/world/models/gingerbread.glb
 ```
 
-`--scene` is `diorama` (a cluster like a paper-village display), `lineup` or `closeup`. The export differs from the winter houses in a few ways. Each design is `<Key>_Body` plus `<Key>_Frosting`: the roof icing is baked near-white so the browser can tint it per house (pink, mint, lemon…). It bakes a normal map and a roughness map as well as colour + AO, so the cookie texture and the candy shine survive in the browser. There are no glow meshes, because the village stands in daylight. About 47k triangles in total, ~2.2 MB.
+`--scene` is `diorama` (a cluster like a paper-village display), `lineup` or `closeup`. The export differs from the winter houses in a few ways. Each design is `<Key>_Body` plus `<Key>_Frosting`: the roof icing is baked near-white so the browser can tint it per house (pink, mint, lemon…). It bakes a normal map and a roughness map as well as colour + AO, so the cookie texture and the candy shine survive in the browser. There are no glow meshes, because the village stands in daylight. The export also uses four-sided icing tubes and lighter drips than the renders, to fit the triangle budget: about 35k triangles in total, ~2.3 MB.
 
 Baked occlusion is fine because the planet rotates under a fixed sun: directional shadows still come from the live sun. Don't bake the sun into the texture.
 

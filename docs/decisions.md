@@ -2,6 +2,12 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-23: Gingerbread Land on the sunny side, and villages hidden over the horizon
+
+The second village, Gingerbread Land, is centred at lat 0, lon 180, straight opposite the winter village, so it is always in full daylight. It is its own module (`src/world/gingerbread.js`), loaded by `main.js` as a separate chunk after the winter village is up, with its own GLB from `art/blender/gingerbread.py`. Houses stand in two rings around a steeple, facing it, with four paths in from north, south, east and west kept clear for the explorer (candy canes line them, 0.56 units either side). Each house design is one instanced body plus one instanced roof frosting tinted per house, so the village is about 15 draw calls.
+
+Instanced meshes are culled only as a whole, so a village behind the planet was still drawn, and drawn again in the shadow pass. `horizonGroup(lat, lon, reach)` in `planet.js` returns a group that `updateHorizon()` hides each frame while its spot is more than 90° + `reach` from the explorer. Both villages' houses use it; trees and cobbles, which spread across the planet in shared instanced meshes, don't. That keeps each village's view within the triangle budget: 198k at the winter village (unchanged) and about 275k close / 300k wide at Gingerbread Land. To get there, the web export uses four-sided icing tubes and lighter drips, frosting and small candy pieces cast no shadow, and the outer ring is four houses. Gingerbread Land has no headroom left, so anything added there needs a saving elsewhere (likely a simpler model at a distance).
+
 ## 2026-10-23: Cobblestone road, laid on the snow's slope
 
 The road's stepping-stone dots became about 330 cobblestones in staggered rows, thinning out at the ends and edges. They are one instanced flat-shaded stone (one draw call, about 12k triangles), each tinted, sized and turned on its own through a new `color` option on `instanced()`. Cobbles go down with `placeOnSnow()` in `planet.js`, which tilts each one to the snow surface under it and sinks it slightly; `place()` stands objects straight out from the planet's centre, which left one edge of a flat stone hanging off a drift's side. Turn speed now defaults to 0.5.

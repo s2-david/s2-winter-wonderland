@@ -43,6 +43,8 @@ Vanilla Three.js (pinned to `0.161.0`) bundled with Vite. No UI framework. See t
 - Time of day follows position: the village is at night and the far side of the planet is in daylight. `src/daylight.js` measures how far the explorer has walked from the village and blends each light value from its night tuning to its `day*` tuning, between `dawnStart` and `dawnEnd` degrees.
 - Authored models are built in Blender from scripts in `art/blender/` and exported as Draco-compressed GLB into `src/world/models/`, with colour and ambient occlusion baked into one shared texture and glow kept as emissive materials (no lights). Import them with `?url` so Vite hashes them. See `art/blender/README.md`.
 - Houses come from a few Blender designs (`houses.glb`). `src/world/houses.js` draws every copy of a design with instancing and tints walls and window light per house; `village.js` lists which design goes where. Prefer a new colour or prop over a new design, and a new design over a one-off model.
+- Gingerbread Land, the second village, is on the sunny far side (lat 0, lon 180). Its models come from `art/blender/gingerbread.py` (`gingerbread.glb`), and `src/world/gingerbread.js` lays it out; `main.js` loads that module as its own chunk. Roof frosting is baked white and tinted per house.
+- Village houses go in a `horizonGroup()` (`planet.js`), hidden while the village is over the horizon, because instanced meshes are only culled as a whole. Put a new village's meshes in one too.
 - The planned structure for multiple villages (each village as its own lazily loaded module, loaded by distance) is in `docs/roadmap.md`.
 
 ## Conventions
@@ -61,7 +63,7 @@ The planet will grow to 5–6 detailed villages, so keep an eye on cost from the
 - Triangles per frame: under 300k
 - Frame rate: 60 fps on desktop, 30+ fps on a mid-range phone
 
-Current baseline (one village, measured 2026-10-23 with `renderer.info` after one render, shadow pass included): about 36 draw calls and 140k triangles in both the close and the wide planet view. The smooth snow ground is about 20k of those triangles. Trees (70, in four shapes), road cobblestones and houses are instanced.
+Current baseline (measured 2026-10-23 with `renderer.info` after one render, shadow pass included): at the winter village, 57 draw calls and 198k triangles; at Gingerbread Land, about 55–65 draw calls and 275k (close) to 300k (wide) triangles, which leaves no headroom there. The smooth snow ground is about 20k of those triangles. Trees, road cobblestones and houses are instanced. To measure Gingerbread Land, first turn the planet so it faces the camera (`world.quaternion.set(0, 1, 0, 0)`), then call `updateDaylight()` and `updateHorizon()` before rendering. Import those modules by the URL the page loaded (`performance.getEntriesByType('resource')`), not a plain path: after a hot reload a plain import gets a second copy of the module.
 
 To measure, run this in the dev server's console, with the camera at (0, 4.7, 34) looking at the origin for the wide view, or at (0, 4.5, 12.2) looking at (0, -2, 9.8) for the close view:
 

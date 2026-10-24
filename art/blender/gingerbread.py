@@ -23,6 +23,9 @@ ap.add_argument("--export", default="", help="write every design and prop as one
 ap.add_argument("--bake-size", type=int, default=2048)
 args = ap.parse_args(argv)
 HERE = os.path.dirname(os.path.abspath(__file__))
+# The web export uses four-sided icing tubes (smooth-shaded they still read as round at planet size),
+# which halves the piping, about half of every house's triangles.
+WEB = bool(args.export)
 
 random.seed(7)
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -313,7 +316,7 @@ def pipe(name, pts, parent=None, r=0.02, closed=False, m=None, wobble=0.004, ste
     """A line of piped icing: a round tube along `pts`, a little uneven like it was squeezed by hand."""
     pts = densify(pts, step, closed)
     cu = bpy.data.curves.new(name, "CURVE"); cu.dimensions = "3D"
-    cu.bevel_depth = r; cu.bevel_resolution = 1; cu.use_fill_caps = True
+    cu.bevel_depth = r; cu.bevel_resolution = 0 if WEB else 1; cu.use_fill_caps = True
     sp = cu.splines.new("POLY"); sp.points.add(len(pts) - 1)
     for p, co in zip(sp.points, pts):
         p.co = (*(co + Vector([random.uniform(-wobble, wobble) for _ in range(3)])), 1)
@@ -383,7 +386,7 @@ def drips(parent, a, b, step=0.2, length=(0.05, 0.16), r=0.035):
     for k in range(n + 1):
         p = a.lerp(b, k / n) + Vector((random.uniform(-.01, .01), random.uniform(-.01, .01), 0))
         ln = random.uniform(*length)
-        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=6, v_segments=4, radius=1)
+        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=5 if WEB else 6, v_segments=3 if WEB else 4, radius=1)
         for v in bm.verts:  # a teardrop: full at the bottom, thin where it leaves the edge
             t = (v.co.z + 1) / 2
             w = r * (1.0 - 0.45 * t)
