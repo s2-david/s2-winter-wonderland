@@ -40,15 +40,23 @@ function glowMaterial(stops) {
   });
 }
 
-function instanced(geometry, material, spots, perInstance, parent) {
+// `far`, if given, gets a copy that casts no shadow, drawn instead while the village is at the planet's
+// edge (farVersion in planet.js): its shadows fall out of sight there but would still cost a second pass.
+// Returns every mesh made, so window glows can mark both for bloom.
+function instanced(geometry, material, spots, perInstance, parent, far, shadow = false) {
   const mesh = new THREE.InstancedMesh(geometry, material, spots.length);
   spots.forEach((spot, i) => {
     mesh.setMatrixAt(i, spot.matrix);
     if (perInstance) mesh.setColorAt(i, perInstance(spot));
   });
   mesh.computeBoundingSphere();
+  mesh.castShadow = mesh.receiveShadow = shadow;
   parent.add(mesh);
-  return mesh;
+  if (!far) return [mesh];
+  const copy = mesh.clone();
+  copy.castShadow = false;
+  far.add(copy);
+  return [mesh, copy];
 }
 
 // The export marks each window pane with a "Halo_<Design>" node scaled to the pane. One soft glow,
@@ -64,8 +72,8 @@ function haloGeometry(model, design) {
 
 // houses: [{ design, wall: '#hex', light: 0 (dark) … 1 (lit), lat, lon, facing? }]
 // The front door faces the starting plaza unless `facing` gives another [lat, lon] to face.
-// Meshes go into `parent` (by default straight onto the planet).
-export function placeHouses(houses, parent = world) {
+// Meshes go into `parent` (by default straight onto the planet), and shadowless copies into `far` if given.
+export function placeHouses(houses, parent = world, far = null) {
   // Collision anchors go down now, so the explorer can't walk through a house that's still loading.
   const scale = new THREE.Matrix4().makeScale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
   const spots = houses.map(house => {
@@ -87,7 +95,7 @@ export function placeHouses(houses, parent = world) {
   }));
   const poolMaterial = glowMaterial([[0, 'rgba(255, 170, 90, 0.55)'], [0.5, 'rgba(255, 140, 60, 0.18)'], [1, 'rgba(255, 120, 40, 0)']]);
   glowDecal(poolMaterial, 0.6);
-  instanced(pool, poolMaterial, poolSpots, lightColor, parent);
+  instanced(pool, poolMaterial, poolSpots, lightColor, parent, far);
 
   const draco = new DRACOLoader().setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
   new GLTFLoader().setDRACOLoader(draco).load(housesUrl, ({ scene: model }) => {
@@ -111,17 +119,16 @@ export function placeHouses(houses, parent = world) {
             if (!glowMaterials.has(o.material)) {
               glowMaterials.set(o.material, new THREE.MeshBasicMaterial({ color: WINDOW_GLOW, toneMapped: false }));
             }
-            glow(instanced(geometry, glowMaterials.get(o.material), mine, lightColor, parent));
+            instanced(geometry, glowMaterials.get(o.material), mine, lightColor, parent, far).forEach(glow);
             return;
           }
-          const mesh = instanced(geometry, o.material, mine, kind === 'Walls' ? spot => new THREE.Color(spot.wall) : null, parent);
-          mesh.castShadow = mesh.receiveShadow = true;
-          addGrain(mesh);
+          addGrain(o);
+          instanced(geometry, o.material, mine, kind === 'Walls' ? spot => new THREE.Color(spot.wall) : null, parent, far, true);
         });
       }
 
       const halos = haloGeometry(model, design);
-      if (halos) instanced(halos, haloMaterial, mine, lightColor, parent);
+      if (halos) instanced(halos, haloMaterial, mine, lightColor, parent, far);
     }
     draco.dispose();
   });

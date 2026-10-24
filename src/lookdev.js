@@ -28,6 +28,7 @@ const ui = {
   frost: document.getElementById('frost'),
   daylight: document.getElementById('daylight'),
   spin: document.getElementById('spin'),
+  far: document.getElementById('far'), // the lighter version drawn at the planet's edge
   tone: document.getElementById('tone'),
   exposure: document.getElementById('exposure'),
 };
@@ -49,14 +50,15 @@ function build(parts, frost) {
   return g;
 }
 
-loadGingerbread(renderer).then(models => {
+loadGingerbread(renderer).then(({ near, far }) => {
   ui.model.add(new Option('Everything', 'all'));
-  for (const name of models.keys()) ui.model.add(new Option(name, name));
+  for (const name of near.keys()) ui.model.add(new Option(name, name));
   ui.model.value = 'Cottage';
   ui.frost.value = 'pink';
 
   const show = () => {
     turntable.clear();
+    const models = ui.far.checked ? far : near;
     const names = ui.model.value === 'all' ? [...models.keys()] : [ui.model.value];
     names.forEach((name, i) => {
       const g = build(models.get(name), ui.frost.value);
@@ -66,6 +68,7 @@ loadGingerbread(renderer).then(models => {
   };
   ui.model.addEventListener('change', show);
   ui.frost.addEventListener('change', show);
+  ui.far.addEventListener('change', show);
   show();
 });
 

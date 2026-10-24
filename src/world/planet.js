@@ -101,13 +101,29 @@ export function horizonGroup(lat, lon, reach) {
   return group;
 }
 
+// A lighter version of a horizon group, drawn instead of it while its spot is more than `from` degrees
+// from the view. That far round, the zoomed-out camera sees the village edge-on at the planet's rim, and
+// the close camera sees at most a steeple over the horizon, so fine detail is a pixel or two wide.
+export function farVersion(group, from) {
+  const h = horizonGroups.find(h => h.group === group);
+  h.far = new THREE.Group();
+  h.farFrom = THREE.MathUtils.degToRad(from);
+  world.add(h.far);
+  return h.far;
+}
+
 // The explorer stands at +Z (see daylight.js), so that's where the horizon is measured from unless the
 // zoomed-out camera is orbiting somewhere else (`viewFrom` in cameraRig.js). Call once per frame after
 // the planet and camera have moved.
 const EXPLORER = new THREE.Vector3(0, 0, 1), toward = new THREE.Vector3();
+const SWITCH_MARGIN = THREE.MathUtils.degToRad(1); // so a view resting on the switch doesn't flicker
 export function updateHorizon(from = EXPLORER) {
   for (const h of horizonGroups) {
-    h.group.visible = toward.copy(h.dir).applyQuaternion(world.quaternion).angleTo(from) < h.limit;
+    const angle = toward.copy(h.dir).applyQuaternion(world.quaternion).angleTo(from);
+    const shown = angle < h.limit;
+    if (h.far) h.isFar = angle > h.farFrom + (h.isFar ? -SWITCH_MARGIN : SWITCH_MARGIN);
+    h.group.visible = shown && !h.isFar;
+    if (h.far) h.far.visible = shown && h.isFar;
   }
 }
 

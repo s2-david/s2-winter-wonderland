@@ -907,6 +907,23 @@ def shaded(albedo, ao, floor):
     lin = np.clip(fill_gaps(albedo, None) * (floor + (1 - floor) * fill_gaps(ao, (1, 1, 1))[:, :1]), 0, 1)
     return np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
 
+# The far-off version of each house (<Key>_<Class>Far), drawn instead when the village is at the
+# planet's edge: icing tubes, candy and gumdrops lose the extra rings along straight runs and most of
+# their sides. They're a pixel or two wide by then, so nothing visibly changes; the UVs, and so the baked
+# colour, carry over. Dough, frosting and windows are already cheap and stay as they are. Trees and
+# candy fixtures keep their full detail: they're a small share of the triangles, and simplifying the
+# trees' scalloped icing visibly took their white outlines away.
+FAR = {"Icing": 0.2, "Candy": 0.3, "Gumdrop": 0.35}
+
+def far_copy(ob, ratio):
+    far = link(bpy.data.objects.new(f"{ob.name}Far", ob.data.copy()))
+    far.data.name = far.name
+    mod = far.modifiers.new("Far", "DECIMATE"); mod.ratio = ratio; mod.use_collapse_triangulate = True
+    with bpy.context.temp_override(object=far, active_object=far):
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+    far.data.validate()  # drop any faces the decimation collapsed to nothing
+    return far
+
 def export_all(path):
     """Every design and prop in one GLB, as <Key>_<Class> meshes (see CLASSES). Frosting is baked
     near-white so the browser can tint it per house."""
@@ -986,6 +1003,7 @@ def export_all(path):
                 for name in ("lco", "part"):
                     if name in ob.data.attributes: ob.data.attributes.remove(ob.data.attributes[name])
                 out.append(ob)
+                if k in DESIGNS and c in FAR: out.append(far_copy(ob, FAR[c]))
         bpy.data.objects.remove(src)
 
     for o in out:

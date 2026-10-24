@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { placeBlocked, point, horizonGroup } from './planet.js';
+import { placeBlocked, point, horizonGroup, farVersion } from './planet.js';
 import { renderer } from '../stage.js';
 import { loadGingerbread } from './gingerbreadLook.js';
 
@@ -12,6 +12,8 @@ const MODEL_SCALE = 0.55;
 
 // Everything drawn for the village, hidden while it is over the horizon. It reaches out to its ring of trees.
 const land = horizonGroup(...GINGER_SPOT, 46);
+// Its lighter far-off version, for when it's at the edge of the planet (see farVersion in planet.js).
+const farLand = farVersion(land, 60);
 
 // Per model, the collision radius in planet units.
 const RADIUS = {
@@ -83,7 +85,7 @@ function spot({ key, lat, lon, facing, yaw, scale = 1 }, rand) {
   return anchor.matrix;
 }
 
-function instanced(geometry, material, matrices, colors, shadow) {
+function instanced(geometry, material, matrices, colors, shadow, parent) {
   const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
   matrices.forEach((m, i) => {
     mesh.setMatrixAt(i, m);
@@ -92,7 +94,7 @@ function instanced(geometry, material, matrices, colors, shadow) {
   mesh.computeBoundingSphere();
   mesh.castShadow = shadow;
   mesh.receiveShadow = true;
-  land.add(mesh);
+  parent.add(mesh);
 }
 
 export function buildGingerbreadLand() {
@@ -103,13 +105,16 @@ export function buildGingerbreadLand() {
   const placed = [...houses, ...props].map(item => ({ ...item, matrix: spot(item, rand) }));
 
   // One instanced mesh per model and kind of surface, so every copy of a model shares a few draw calls.
-  loadGingerbread(renderer).then(models => {
-    for (const [key, parts] of models) {
-      const mine = placed.filter(item => item.key === key);
-      if (!mine.length) continue;
-      for (const { kind, geometry, material, castShadow } of parts) {
-        instanced(geometry, material, mine.map(item => item.matrix),
-          kind === 'Frosting' ? mine.map(item => FROST[item.frost]) : null, castShadow);
+  // The far-off version is built the same way and drawn instead once the village is at the planet's edge.
+  loadGingerbread(renderer).then(({ near, far }) => {
+    for (const [models, parent] of [[near, land], [far, farLand]]) {
+      for (const [key, parts] of models) {
+        const mine = placed.filter(item => item.key === key);
+        if (!mine.length) continue;
+        for (const { kind, geometry, material, castShadow } of parts) {
+          instanced(geometry, material, mine.map(item => item.matrix),
+            kind === 'Frosting' ? mine.map(item => FROST[item.frost]) : null, castShadow, parent);
+        }
       }
     }
   });

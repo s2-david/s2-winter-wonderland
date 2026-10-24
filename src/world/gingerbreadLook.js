@@ -126,25 +126,33 @@ const LOOK = {
 };
 export const KINDS = Object.keys(LOOK);
 
-// Resolves to a Map of model name → [{ kind, geometry, material, castShadow }], geometry in the model's
-// own space (Y up, Blender units).
+// Resolves to { near, far }, each a Map of model name → [{ kind, geometry, material, castShadow }],
+// geometry in the model's own space (Y up, Blender units). `far` is the lighter version drawn when the
+// village is only a sliver at the planet's edge: the same dough, frosting and windows, with the
+// simplified icing and candy the GLB holds as <Model>_<Kind>Far, and no shadows.
 export function loadGingerbread(renderer) {
   const env = skyEnvironment(renderer);
   const draco = new DRACOLoader().setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
   return new GLTFLoader().setDRACOLoader(draco).loadAsync(gingerbreadUrl).then(({ scene: model }) => {
     draco.dispose();
     model.updateMatrixWorld(true);
-    const materials = new Map(), models = new Map();
+    const materials = new Map(), near = new Map(), farOnly = new Map();
+    const add = (models, name, part) => (models.get(name) ?? models.set(name, []).get(name)).push(part);
     model.traverse(o => {
       if (!o.isMesh) return;
-      const [name, kind] = o.name.split('_');
+      const [name, label = ''] = o.name.split('_');
+      const kind = label.replace(/Far$/, '');
       if (!LOOK[kind]) return;
       if (!materials.has(kind)) materials.set(kind, LOOK[kind](o.material, env));
-      if (!models.has(name)) models.set(name, []);
-      models.get(name).push({
-        kind, geometry: o.geometry.clone().applyMatrix4(o.matrixWorld), material: materials.get(kind), castShadow: kind === 'Dough',
-      });
+      const part = { kind, geometry: o.geometry.clone().applyMatrix4(o.matrixWorld), material: materials.get(kind) };
+      if (kind === label) add(near, name, { ...part, castShadow: kind === 'Dough' });
+      else add(farOnly, name, { ...part, castShadow: false });
     });
-    return models;
+    const far = new Map([...near].map(([name, parts]) => {
+      const simplified = farOnly.get(name) ?? [];
+      const kept = parts.filter(p => !simplified.some(s => s.kind === p.kind)).map(p => ({ ...p, castShadow: false }));
+      return [name, [...kept, ...simplified]];
+    }));
+    return { near, far };
   });
 }

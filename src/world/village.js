@@ -1,5 +1,5 @@
 import { R } from '../config.js';
-import { placeBlocked, placeOnSnow, horizonGroup } from './planet.js';
+import { placeBlocked, placeOnSnow, horizonGroup, farVersion } from './planet.js';
 import { makeTree, treeReach, makeCobble } from './props.js';
 import { placeHouses } from './houses.js';
 import { BELL_SPOT } from './bell.js';
@@ -32,10 +32,13 @@ export function buildVillage() {
   ];
   const innerAngles = [-52.5, -17.5, 17.5, 52.5, 127.5, 162.5, 197.5, 232.5];
   const outer = [['Cabin', '#7f97a6', 1, 0], ['Cabin', '#8a6a4f', 0.6, 180]];
+  const houses = horizonGroup(...BELL_SPOT, 32); // hidden from the far side of the planet
   placeHouses([
     ...inner.map(([design, wall, light], i) => ({ design, wall, light, ...aroundBell(15, innerAngles[i]), facing: BELL_SPOT })),
     ...outer.map(([design, wall, light, angle]) => ({ design, wall, light, ...aroundBell(28, angle), facing: BELL_SPOT })),
-  ], horizonGroup(...BELL_SPOT, 32)); // hidden from the far side of the planet
+  // Zoomed out, the houses' shadows change no pixels even 30° round, so from 43° (past the close
+  // camera's horizon, before Gingerbread Land comes into view) they're drawn without them.
+  ], houses, farVersion(houses, 43));
 
   // Trees: a ring of mixed shapes around the village, and a pair flanking the road where it enters each side.
   for (let k = 0; k < 16; k++) {
