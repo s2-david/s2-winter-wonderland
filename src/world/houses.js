@@ -4,6 +4,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { world, placeBlocked, point } from './planet.js';
 import { addGrain } from '../grain.js';
+import { glow, glowDecal } from '../post.js';
 import housesUrl from './models/houses.glb?url';
 
 // House designs modelled in Blender; how to re-export them is in art/blender/README.md.
@@ -41,6 +42,7 @@ function glowMaterial(stops) {
 
 // `far`, if given, gets a copy that casts no shadow, drawn instead while the village is at the planet's
 // edge (farVersion in planet.js): its shadows fall out of sight there but would still cost a second pass.
+// Returns every mesh made, so window glows can mark both for bloom.
 function instanced(geometry, material, spots, perInstance, parent, far, shadow = false) {
   const mesh = new THREE.InstancedMesh(geometry, material, spots.length);
   spots.forEach((spot, i) => {
@@ -50,11 +52,11 @@ function instanced(geometry, material, spots, perInstance, parent, far, shadow =
   mesh.computeBoundingSphere();
   mesh.castShadow = mesh.receiveShadow = shadow;
   parent.add(mesh);
-  if (far) {
-    const copy = mesh.clone();
-    copy.castShadow = false;
-    far.add(copy);
-  }
+  if (!far) return [mesh];
+  const copy = mesh.clone();
+  copy.castShadow = false;
+  far.add(copy);
+  return [mesh, copy];
 }
 
 // The export marks each window pane with a "Halo_<Design>" node scaled to the pane. One soft glow,
@@ -91,13 +93,15 @@ export function placeHouses(houses, parent = world, far = null) {
     ...spot,
     matrix: spot.base.clone().multiply(new THREE.Matrix4().makeTranslation(0.15, 0.16, DESIGNS[spot.design].front + 0.04)),
   }));
-  instanced(pool, glowMaterial([[0, 'rgba(255, 170, 90, 0.55)'], [0.5, 'rgba(255, 140, 60, 0.18)'], [1, 'rgba(255, 120, 40, 0)']]),
-    poolSpots, lightColor, parent, far);
+  const poolMaterial = glowMaterial([[0, 'rgba(255, 170, 90, 0.55)'], [0.5, 'rgba(255, 140, 60, 0.18)'], [1, 'rgba(255, 120, 40, 0)']]);
+  glowDecal(poolMaterial, 0.6);
+  instanced(pool, poolMaterial, poolSpots, lightColor, parent, far);
 
   const draco = new DRACOLoader().setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
   new GLTFLoader().setDRACOLoader(draco).load(housesUrl, ({ scene: model }) => {
     model.updateMatrixWorld(true);
     const haloMaterial = glowMaterial([[0, 'rgba(255, 100, 25, 0.4)'], [0.4, 'rgba(255, 90, 20, 0.22)'], [1, 'rgba(255, 80, 15, 0)']]);
+    glowDecal(haloMaterial, 0.3);
     const glowMaterials = new Map();
 
     for (const design of Object.keys(DESIGNS)) {
@@ -115,7 +119,7 @@ export function placeHouses(houses, parent = world, far = null) {
             if (!glowMaterials.has(o.material)) {
               glowMaterials.set(o.material, new THREE.MeshBasicMaterial({ color: WINDOW_GLOW, toneMapped: false }));
             }
-            instanced(geometry, glowMaterials.get(o.material), mine, lightColor, parent, far);
+            instanced(geometry, glowMaterials.get(o.material), mine, lightColor, parent, far).forEach(glow);
             return;
           }
           addGrain(o);

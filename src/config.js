@@ -52,4 +52,12 @@ export const tuning = {
   daySkyWarmth: 0.15,
   dayMoonStrength: 0,
   dayExposure: 1.05,
+  // Post-processing (src/post.js). Bloom and vignette are the night values; day* are full day.
+  postQuality: 2, // 0 off, 1 without tilt-shift (phones start here), 2 everything
+  bloom: 1.2, // glow around lit windows
+  dayBloom: 0.3,
+  vignette: 0.45,
+  dayVignette: 0.3,
+  tiltShift: 1, // 0 turns the miniature blur off
+  tiltFocus: 0.45, // height of the sharp band across the middle of the screen
 };
