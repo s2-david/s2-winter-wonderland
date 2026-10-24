@@ -4,6 +4,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { world, placeBlocked, point } from './planet.js';
 import { addGrain } from '../grain.js';
+import { glow, glowDecal } from '../post.js';
 import housesUrl from './models/houses.glb?url';
 
 // House designs modelled in Blender; how to re-export them is in art/blender/README.md.
@@ -83,13 +84,15 @@ export function placeHouses(houses) {
     ...spot,
     matrix: spot.base.clone().multiply(new THREE.Matrix4().makeTranslation(0.15, 0.16, DESIGNS[spot.design].front + 0.04)),
   }));
-  instanced(pool, glowMaterial([[0, 'rgba(255, 170, 90, 0.55)'], [0.5, 'rgba(255, 140, 60, 0.18)'], [1, 'rgba(255, 120, 40, 0)']]),
-    poolSpots, lightColor);
+  const poolMaterial = glowMaterial([[0, 'rgba(255, 170, 90, 0.55)'], [0.5, 'rgba(255, 140, 60, 0.18)'], [1, 'rgba(255, 120, 40, 0)']]);
+  glowDecal(poolMaterial, 0.6);
+  instanced(pool, poolMaterial, poolSpots, lightColor);
 
   const draco = new DRACOLoader().setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
   new GLTFLoader().setDRACOLoader(draco).load(housesUrl, ({ scene: model }) => {
     model.updateMatrixWorld(true);
     const haloMaterial = glowMaterial([[0, 'rgba(255, 100, 25, 0.4)'], [0.4, 'rgba(255, 90, 20, 0.22)'], [1, 'rgba(255, 80, 15, 0)']]);
+    glowDecal(haloMaterial, 0.3);
     const glowMaterials = new Map();
 
     for (const design of Object.keys(DESIGNS)) {
@@ -107,7 +110,7 @@ export function placeHouses(houses) {
             if (!glowMaterials.has(o.material)) {
               glowMaterials.set(o.material, new THREE.MeshBasicMaterial({ color: WINDOW_GLOW, toneMapped: false }));
             }
-            instanced(geometry, glowMaterials.get(o.material), mine, lightColor);
+            glow(instanced(geometry, glowMaterials.get(o.material), mine, lightColor));
             return;
           }
           const mesh = instanced(geometry, o.material, mine, kind === 'Walls' ? spot => new THREE.Color(spot.wall) : null);

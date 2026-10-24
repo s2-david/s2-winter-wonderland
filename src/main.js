@@ -1,6 +1,7 @@
 import './styles.css';
 import { BELL_RANGE, SHOW_TUNER } from './config.js';
-import { scene, camera, renderer, applyLightTuning } from './stage.js';
+import { scene, applyLightTuning } from './stage.js';
+import { renderFrame } from './post.js';
 import { world } from './world/planet.js';
 import { buildVillage } from './world/village.js';
 import { placeBell, swingBell, updateBell, distanceToBell } from './world/bell.js';
@@ -59,6 +60,6 @@ function loop(t) {
   updateBell(dt);
   updateGrain();
   showBellPrompt(bellIsNear());
-  renderer.render(scene, camera);
+  renderFrame(dt);
 }
 requestAnimationFrame(loop);
