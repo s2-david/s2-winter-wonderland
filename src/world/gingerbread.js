@@ -13,7 +13,7 @@ export const GINGER_SPOT = [0, 180]; // lat, lon
 const MODEL_SCALE = 0.55;
 
 // Everything drawn for the village, hidden while it is over the horizon. It reaches out to its ring of trees.
-const land = horizonGroup(...GINGER_SPOT, 40);
+const land = horizonGroup(...GINGER_SPOT, 46);
 
 // Per model, the collision radius in planet units.
 const RADIUS = {
@@ -39,32 +39,33 @@ function layout() {
   const houses = [{ key: 'Steeple', frost: 'white', ...around(0, 0), yaw: Math.PI / 4 }];
 
   // Inner ring, facing the steeple: two houses between each pair of paths, a tall one beside a small one.
+  // Set well back (about 3 units) so the plaza between them and the steeple is open to walk around.
   const inner = [['Cottage', 'pink'], ['Tower', 'lemon'], ['Townhouse', 'mint'], ['Cottage', 'lilac'],
     ['Tower', 'pink'], ['Cottage', 'lemon'], ['Townhouse', 'pink'], ['Cottage', 'mint']];
   [24, 66, 114, 156, 204, 246, 294, 336].forEach((angle, i) =>
-    houses.push({ key: inner[i][0], frost: inner[i][1], ...around(13, angle), facing: GINGER_SPOT }));
+    houses.push({ key: inner[i][0], frost: inner[i][1], ...around(17, angle), facing: GINGER_SPOT }));
 
   // Outer ring, behind the gaps between inner pairs: the wide halls and a tall house, so the skyline
   // steps up and down. Kept to four for the triangle budget.
   const outer = [['Hall', 'mint'], ['Townhouse', 'lilac'], ['Hall', 'lemon'], ['Tower', 'mint']];
   [45, 135, 225, 315].forEach((angle, i) =>
-    houses.push({ key: outer[i][0], frost: outer[i][1], ...around(24, angle), facing: GINGER_SPOT }));
+    houses.push({ key: outer[i][0], frost: outer[i][1], ...around(29, angle), facing: GINGER_SPOT }));
 
   const props = [];
   // Gingerbread trees in the gaps of the inner ring and in a loose ring outside the village.
-  for (const angle of [45, 135, 225, 315]) props.push({ key: 'TallTree', ...around(18, angle), scale: 0.9 });
+  for (const angle of [45, 135, 225, 315]) props.push({ key: 'TallTree', ...around(22, angle), scale: 0.9 });
   for (let k = 0; k < 14; k++) {
     const angle = k * 360 / 14 + (k % 2 ? 5 : -3);
     if (onPath(angle, 9)) continue;
-    props.push({ key: k % 3 ? 'TallTree' : 'PlumpTree', ...around(33 + (k % 3) * 2, angle), scale: 0.85 + (k % 4) * 0.1 });
+    props.push({ key: k % 3 ? 'TallTree' : 'PlumpTree', ...around(38 + (k % 3) * 2, angle), scale: 0.85 + (k % 4) * 0.1 });
   }
   // Candy canes line each path in pairs, with lollipops and gumdrops where the paths meet the village.
   for (const p of [0, 90, 180, 270]) {
-    for (const r of [22]) for (const side of [-1, 1]) {
+    for (const r of [26]) for (const side of [-1, 1]) {
       // 3.2° (0.56 units) either side of the path's centre line, leaving the explorer room to pass.
       props.push({ key: 'CandyCane', ...around(r, p + side * THREE.MathUtils.radToDeg(3.2 / r)) });
     }
-    props.push({ key: 'Lollipop', ...around(9, p + 22) }, { key: 'Gumdrops', ...around(9, p - 22) });
+    props.push({ key: 'Lollipop', ...around(12, p + 16) }, { key: 'Gumdrops', ...around(12, p - 16) });
   }
   return { houses, props };
 }
