@@ -2,6 +2,10 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-24: Dragging the zoomed-out planet orbits the camera, not the world
+
+Zoomed out (past `ZOOM.orbit`), dragging with the mouse turns the planet to look it over; an arrow key, the joystick or zooming back in eases the view home to the explorer. The camera circles the planet's centre and the lights turn with it, rather than the `world` group rotating, because `world`'s rotation *is* the explorer's position: turning it would move the explorer and change the time of day. Turning the lights too keeps the side being looked at lit like the front. Mouse only for now; one-finger drag on touch is open.
+
 ## 2026-10-23: Cobblestone road, laid on the snow's slope
 
 The road's stepping-stone dots became about 330 cobblestones in staggered rows, thinning out at the ends and edges. They are one instanced flat-shaded stone (one draw call, about 12k triangles), each tinted, sized and turned on its own through a new `color` option on `instanced()`. Cobbles go down with `placeOnSnow()` in `planet.js`, which tilts each one to the snow surface under it and sinks it slightly; `place()` stands objects straight out from the planet's centre, which left one edge of a flat stone hanging off a drift's side. Turn speed now defaults to 0.5.
