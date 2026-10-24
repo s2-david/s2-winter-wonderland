@@ -28,7 +28,7 @@ The explorer always stands at the top of the planet, so most of the planet is be
    - [x] Vercel builds from source
    - [x] Mobile controls
    - [ ] Performance overlay (fps, draw calls, triangles) behind `?debug`
-   - [ ] Village module system: load/unload by distance, horizon culling
+   - [ ] Village module system: load/unload by distance, horizon culling (horizon culling and a lazily loaded module done for village houses; trees and unloading still to do)
    - [ ] Shared interaction system (move the bell onto it)
    - [ ] Per-village collision
 2. **Prove the look**
@@ -40,7 +40,7 @@ The explorer always stands at the top of the planet, so most of the planet is be
    - [ ] Device-based quality levels and dynamic resolution
 4. **Villages, one at a time**
    - [ ] Village 1 (current village, rebuilt in the new style)
-   - [ ] Candy Land
+   - [x] Gingerbread Land (the candy village, on the sunny far side)
    - [ ] Icy Forest
    - [ ] …each checked against the performance budget before merging
 

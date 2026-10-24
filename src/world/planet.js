@@ -90,6 +90,25 @@ export function placeOnSnow(obj, lat, lon, sink = 0) {
   return obj;
 }
 
+// Groups of things around one spot, hidden while that spot is over the horizon. Instanced meshes are
+// culled only as a whole, so without this a village would still be drawn (and shadowed) from the far
+// side of the planet. `reach` is how far, in degrees, the group spreads from its spot.
+const horizonGroups = [];
+export function horizonGroup(lat, lon, reach) {
+  const group = new THREE.Group();
+  world.add(group);
+  horizonGroups.push({ group, dir: point(lat, lon).normalize(), limit: THREE.MathUtils.degToRad(90 + reach) });
+  return group;
+}
+
+// The explorer stands at +Z (see daylight.js). Call once per frame after the planet has moved.
+const EXPLORER = new THREE.Vector3(0, 0, 1), toward = new THREE.Vector3();
+export function updateHorizon() {
+  for (const h of horizonGroups) {
+    h.group.visible = toward.copy(h.dir).applyQuaternion(world.quaternion).angleTo(EXPLORER) < h.limit;
+  }
+}
+
 export function placeBlocked(obj, lat, lon, lift, radius) {
   place(obj, lat, lon, lift);
   blockers.push({ obj, radius });

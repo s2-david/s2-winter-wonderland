@@ -34,6 +34,17 @@ Every design goes into one GLB, built to be cheap in the browser:
 
 The four designs total about 30,000 triangles in a ~770 kB GLB. `src/world/houses.js` draws every copy of a design with instancing, so the whole village costs about 17 draw calls however many houses stand on the planet. `src/world/village.js` lists the houses: design, wall colour, how lit the windows are, and position.
 
+## Gingerbread Land
+
+`gingerbread.py` builds the second village's models the same way: five gingerbread house designs (**Cottage**, **Townhouse**, **Hall**, **Tower**, **Steeple**), two gingerbread trees and candy fixtures (candy cane, lollipop, gumdrops). Everything is procedural: mottled gingerbread with browned edges and air pits, piped icing tubes, dripping eaves, fish-scale roof frosting, gumdrops, peppermints and hard-candy windows.
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender -b -P gingerbread.py -- --scene diorama --samples 160
+/Applications/Blender.app/Contents/MacOS/Blender -b -P gingerbread.py -- --export ../../src/world/models/gingerbread.glb
+```
+
+`--scene` is `diorama` (a cluster like a paper-village display), `lineup` or `closeup`. The export differs from the winter houses. Every model is split into one mesh per kind of surface, `<Key>_Dough`, `_Frosting`, `_Icing`, `_Candy`, `_Gumdrop` and `_Glass`, so the browser can shade each its own way (`src/world/gingerbreadLook.js`). Dough, frosting, candy and windows share a detailed 2048² sheet (colour with soft shadow, plus a bump map); icing and gumdrops are plain colours and share a 1024² sheet. Gaps between texture islands are filled with the sheet's average colour so tiny pieces don't darken at a distance. Roof frosting is baked near-white so the browser can tint it per house. About 74k triangles in total, ~1.7 MB. Check the result in `lookdev.html`.
+
 Baked occlusion is fine because the planet rotates under a fixed sun: directional shadows still come from the live sun. Don't bake the sun into the texture.
 
 ## The snowman

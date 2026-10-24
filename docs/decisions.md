@@ -2,6 +2,28 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-24: Each village has its own material language
+
+The winter village is paper: the paper grain shader on everything. Gingerbread Land is baked ginger dough, smooth glossy piped icing and shiny candy, and skips the grain. Each village should look as good as it can within the budget, so its materials are made for it rather than shared. For Gingerbread Land:
+
+- The GLB holds one mesh per kind of surface (dough, frosting, icing, candy, gumdrop, window glass), each with its own material in `src/world/gingerbreadLook.js`: dough with a slight egg-wash sheen, glossy icing and frosting, clear-glazed hard candy (`MeshPhysicalMaterial` clearcoat), gumdrops with a little light glowing through, candy-glass windows lit from inside.
+- Shiny surfaces need something to reflect, so the village has its own daytime sky reflection: a gradient sky with two soft light panels, built once with `PMREMGenerator`. It's on those materials only, not `scene.environment`, so the paper village is untouched.
+- Icing is smooth round tubes now, not hand-wobbly or four-sided. Only the dough casts shadows; icing and candy are about one shadow-map pixel wide. That made the village cheaper than before (281k triangles in the wide view instead of 299k) despite the smoother icing.
+- Dough and frosting get their own detailed texture sheet instead of sharing one with thousands of icing pieces, so walls have several times the texture detail.
+- Fine dough detail (air pores and crumb) is drawn in the shader, in each model's own space, like the paper grain: crisp up close where the texture runs out of pixels, no download, fading out once smaller than a pixel. Walls are no longer randomly wobbled, because the wobble folded each flat wall along its triangles and the baked edge-browning picked up the folds as dark bands.
+- Thick icing lines (frames, seams, ridges) use 12-sided tubes and drips are rounded beads; thin lines stay 8-sided. Windows are candy glass with a deep colour at the frame and a warm glow in the middle.
+- Tone mapping stays ACES for the whole planet: AgX looked flatter on the candy and would also change the paper village. `lookdev.html` has controls to compare them.
+
+With the rounder icing, Gingerbread Land is 289k triangles close up and 314k in the wide view, just over the 300k starting target. That target was set before the target devices were known (an iPhone 16 and a Windows laptop); raising it to about 500k is proposed but not yet measured on those devices.
+
+`lookdev.html` shows any model under the game's lights for judging all this, on desktop or a phone. Target devices are an iPhone 16 and a Windows laptop (likely integrated graphics); the triangle budget should be revisited once measured on both.
+
+## 2026-10-23: Gingerbread Land on the sunny side, and villages hidden over the horizon
+
+The second village, Gingerbread Land, is centred at lat 0, lon 180, straight opposite the winter village, so it is always in full daylight. It is its own module (`src/world/gingerbread.js`), loaded by `main.js` as a separate chunk after the winter village is up, with its own GLB from `art/blender/gingerbread.py`. Houses stand in two rings around a steeple, facing it: the inner ring 17° (about 3 units) out, so the plaza inside is open to walk around, and the outer ring at 29°. Four paths lead in from north, south, east and west, kept clear for the explorer (candy canes line them, 0.56 units either side). Each house design is one instanced body plus one instanced roof frosting tinted per house, so the village is about 15 draw calls.
+
+Instanced meshes are culled only as a whole, so a village behind the planet was still drawn, and drawn again in the shadow pass. `horizonGroup(lat, lon, reach)` in `planet.js` returns a group that `updateHorizon()` hides each frame while its spot is more than 90° + `reach` from the explorer. Both villages' houses use it; trees and cobbles, which spread across the planet in shared instanced meshes, don't. That keeps each village's view within the triangle budget: 198k at the winter village (unchanged) and about 275k close / 300k wide at Gingerbread Land. To get there, small candy pieces cast no shadow and the outer ring is four houses (the icing and shadow choices changed on 2026-10-24, above).
+
 ## 2026-10-23: Cobblestone road, laid on the snow's slope
 
 The road's stepping-stone dots became about 330 cobblestones in staggered rows, thinning out at the ends and edges. They are one instanced flat-shaded stone (one draw call, about 12k triangles), each tinted, sized and turned on its own through a new `color` option on `instanced()`. Cobbles go down with `placeOnSnow()` in `planet.js`, which tilts each one to the snow surface under it and sinks it slightly; `place()` stands objects straight out from the planet's centre, which left one edge of a flat stone hanging off a drift's side. Turn speed now defaults to 0.5.
