@@ -19,15 +19,19 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
+// The lights turn with the camera when it orbits the zoomed-out planet (src/cameraRig.js), so the
+// side being looked at is lit the way the front is.
+export const lights = new THREE.Group();
+scene.add(lights);
 const sky = new THREE.HemisphereLight('#b7ddff', '#293756', 2.3);
-scene.add(sky);
+lights.add(sky);
 const sun = new THREE.DirectionalLight('#ffe1a5', 2.6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
-scene.add(sun);
+lights.add(sun);
 const moon = new THREE.DirectionalLight('#94bcff', 1.1);
 moon.position.set(8, 3, -5);
-scene.add(moon);
+lights.add(moon);
 
 // Cool night sky by default; "sky warmth" moves the fill toward a warm studio light.
 const SKY = { cool: new THREE.Color('#b7ddff'), warm: new THREE.Color('#ffe8cc') };

@@ -101,11 +101,13 @@ export function horizonGroup(lat, lon, reach) {
   return group;
 }
 
-// The explorer stands at +Z (see daylight.js). Call once per frame after the planet has moved.
+// The explorer stands at +Z (see daylight.js), so that's where the horizon is measured from unless the
+// zoomed-out camera is orbiting somewhere else (`viewFrom` in cameraRig.js). Call once per frame after
+// the planet and camera have moved.
 const EXPLORER = new THREE.Vector3(0, 0, 1), toward = new THREE.Vector3();
-export function updateHorizon() {
+export function updateHorizon(from = EXPLORER) {
   for (const h of horizonGroups) {
-    h.group.visible = toward.copy(h.dir).applyQuaternion(world.quaternion).angleTo(EXPLORER) < h.limit;
+    h.group.visible = toward.copy(h.dir).applyQuaternion(world.quaternion).angleTo(from) < h.limit;
   }
 }
 

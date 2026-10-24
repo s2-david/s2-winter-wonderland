@@ -1,6 +1,9 @@
 * { box-sizing: border-box; }
 body { margin: 0; overflow: hidden; background: #101b3a; color: #f6fbff; font-family: ui-rounded, "Avenir Next", Avenir, "Segoe UI", sans-serif; }
 canvas { display: block; }
+/* Zoomed out, the planet can be dragged round with the mouse (src/cameraRig.js). */
+body.can-orbit:not(.touch) canvas { cursor: grab; }
+body.orbiting canvas { cursor: grabbing; }
 
 #hud { position: fixed; inset: 0; pointer-events: none; }
 .brand { position: absolute; top: 24px; left: 26px; text-shadow: 0 2px 15px #071126; }

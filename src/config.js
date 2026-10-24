@@ -5,7 +5,8 @@ export const SKY_COLOR = '#101b3a';
 // The far side of the planet is in daylight (src/daylight.js).
 export const DAY_SKY_COLOR = '#a9d2f2';
 
-export const ZOOM = { start: 18.5, min: 13.5, max: 36, close: 16, wide: 34 };
+// Zoomed out past `orbit`, dragging with the mouse turns the planet to look it over.
+export const ZOOM = { start: 18.5, min: 13.5, max: 36, close: 16, wide: 34, orbit: 28 };
 
 // How close the explorer must be to ring the bell.
 export const BELL_RANGE = 2.05;

@@ -6,7 +6,7 @@ import { world, updateHorizon } from './world/planet.js';
 import { buildVillage } from './world/village.js';
 import { placeBell, swingBell, updateBell, distanceToBell } from './world/bell.js';
 import { hero, applyHeroTuning, updatePlayer } from './player.js';
-import { toggleView, updateCamera } from './cameraRig.js';
+import { toggleView, updateCamera, viewFrom } from './cameraRig.js';
 import { snow, applySnowTuning, updateSnow } from './snow.js';
 import { jingle } from './audio.js';
 import { addGrain, applyGrainTuning, updateGrain } from './grain.js';
@@ -57,8 +57,8 @@ function loop(t) {
   elapsed = t;
   updatePlayer(dt, t);
   updateDaylight();
-  updateHorizon();
   updateCamera();
+  updateHorizon(viewFrom);
   updateSnow(dt);
   updateBell(dt);
   updateGrain();
