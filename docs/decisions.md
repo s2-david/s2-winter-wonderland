@@ -2,6 +2,17 @@
 
 Decisions already made, newest first. Check here before reopening a settled question. When you make a new decision, add an entry in the same PR: the date, what was decided, and why.
 
+## 2026-10-24: Post-processing for a miniature-diorama look
+
+The scene now renders through the pmndrs `postprocessing` library (`src/post.js`) with one merged effect pass: a tilt-shift blur outside a band across the middle of the screen, bloom, tone mapping and a soft vignette. Bloom is selective: only objects passed to `glow()` (window panes, the bell) bloom, so sunlit snow on the day side never does. Bloom and vignette have night and `day*` strengths blended like the lights. Version 6.37.8 is pinned because it's the last release whose peer range covers three 0.161; three was not upgraded.
+
+- Tone mapping moves from the materials into the effect pass, because three.js only tone-maps when rendering straight to the screen. The window panes' `toneMapped: false` no longer applies, so they go through ACES like everything else; bloom brings back their glow.
+- The additive glow decals (light on the snow and halos around windows) now blend in linear light, which made them much stronger, so they are turned down while the pass is on (`glowDecal()`).
+- The canvas's own MSAA doesn't apply to an offscreen buffer, so the composer's buffer gets 4× MSAA instead. SMAA wasn't needed.
+- Tilt-shift is the screen-space kind, not depth of field: it needs no depth reads, costs about 5 draw calls, and reads as a miniature from any camera.
+- Cost: about 23 extra draw calls (28 with tilt-shift) and 1–2 ms per frame at 2048×1536 on an M-series Mac. The busiest view (Gingerbread Land, wide) goes from 92 to 116 draw calls, under the 150 budget. The bundle grows about 18 kB gzipped.
+- `tuning.postQuality` switches levels: touch devices start without tilt-shift, and 0 turns the pass off and renders exactly as before. It hasn't been measured on a real phone yet.
+
 ## 2026-10-24: Each village has its own material language
 
 The winter village is paper: the paper grain shader on everything. Gingerbread Land is baked ginger dough, smooth glossy piped icing and shiny candy, and skips the grain. Each village should look as good as it can within the budget, so its materials are made for it rather than shared. For Gingerbread Land:
