@@ -10,6 +10,11 @@ The winter village is paper: the paper grain shader on everything. Gingerbread L
 - Shiny surfaces need something to reflect, so the village has its own daytime sky reflection: a gradient sky with two soft light panels, built once with `PMREMGenerator`. It's on those materials only, not `scene.environment`, so the paper village is untouched.
 - Icing is smooth round tubes now, not hand-wobbly or four-sided. Only the dough casts shadows; icing and candy are about one shadow-map pixel wide. That made the village cheaper than before (281k triangles in the wide view instead of 299k) despite the smoother icing.
 - Dough and frosting get their own detailed texture sheet instead of sharing one with thousands of icing pieces, so walls have several times the texture detail.
+- Fine dough detail (air pores and crumb) is drawn in the shader, in each model's own space, like the paper grain: crisp up close where the texture runs out of pixels, no download, fading out once smaller than a pixel. Walls are no longer randomly wobbled, because the wobble folded each flat wall along its triangles and the baked edge-browning picked up the folds as dark bands.
+- Thick icing lines (frames, seams, ridges) use 12-sided tubes and drips are rounded beads; thin lines stay 8-sided. Windows are candy glass with a deep colour at the frame and a warm glow in the middle.
+- Tone mapping stays ACES for the whole planet: AgX looked flatter on the candy and would also change the paper village. `lookdev.html` has controls to compare them.
+
+With the rounder icing, Gingerbread Land is 289k triangles close up and 314k in the wide view, just over the 300k starting target. That target was set before the target devices were known (an iPhone 16 and a Windows laptop); raising it to about 500k is proposed but not yet measured on those devices.
 
 `lookdev.html` shows any model under the game's lights for judging all this, on desktop or a phone. Target devices are an iPhone 16 and a Windows laptop (likely integrated graphics); the triangle budget should be revisited once measured on both.
 

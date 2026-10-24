@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { scene, camera, renderer, setDaylight } from './stage.js';
+import { scene, camera, renderer, setDaylight, applyLightTuning } from './stage.js';
+import { tuning } from './config.js';
 import { loadGingerbread } from './world/gingerbreadLook.js';
 
 // Look development: a model on a patch of snow under the game's own lights, tone mapping and daylight,
@@ -27,6 +28,8 @@ const ui = {
   frost: document.getElementById('frost'),
   daylight: document.getElementById('daylight'),
   spin: document.getElementById('spin'),
+  tone: document.getElementById('tone'),
+  exposure: document.getElementById('exposure'),
 };
 for (const name of Object.keys(FROST)) ui.frost.add(new Option(name, name));
 
@@ -69,6 +72,17 @@ loadGingerbread(renderer).then(models => {
 const applyDaylight = () => setDaylight(Number(ui.daylight.value));
 ui.daylight.addEventListener('input', applyDaylight);
 applyDaylight();
+
+// Tone mapping and exposure, to try values before they go into `tuning` (shown here as the full-day ones).
+ui.tone.value = tuning.toneMapping;
+ui.exposure.value = tuning.dayExposure;
+const applyTone = () => {
+  tuning.toneMapping = Number(ui.tone.value);
+  tuning.dayExposure = tuning.exposure = Number(ui.exposure.value);
+  applyLightTuning();
+};
+ui.tone.addEventListener('change', applyTone);
+ui.exposure.addEventListener('input', applyTone);
 
 renderer.setAnimationLoop(() => {
   if (ui.spin.checked) turntable.rotation.z += 0.004;

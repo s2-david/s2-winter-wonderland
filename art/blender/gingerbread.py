@@ -229,9 +229,19 @@ def gumdrop_mat(name, color):
     add_bump(m, vo.outputs["Distance"], 0.35, 0.004)
     return m
 
-def glass_mat(name, color):
-    """Hard-candy window glass, lit a little from inside."""
-    return mat(name, color, rough=0.12, coat=1.0, emit=color, strength=0.6)
+def glass_mat(name, color, deep):
+    """Hard-candy window glass: deep colour at the frame, glowing warmer and lighter towards the middle,
+    like a boiled sweet held up to the light. Windows are flat in their own x-z plane, centred on 0."""
+    m = mat(name, color, rough=0.12, coat=1.0, emit=color, strength=0.6)
+    N, L = m.node_tree.nodes, m.node_tree.links
+    x, y, z = xyz(N, L, obj_co(N))
+    d = vop(N, L, "LENGTH", combine(N, L, x, z))
+    glow = remap(N, L, d, 0.02, 0.3, 1.0, 0.0, smooth=True)
+    light = tuple(min(1.0, c * 1.1 + 0.05) for c in color)
+    col = mix_rgb(N, L, glow, deep, light)
+    L.new(col, N["Principled BSDF"].inputs["Base Color"])
+    L.new(col, N["Principled BSDF"].inputs["Emission Color"])
+    return m
 
 def stripe_mat(name, a, b, pattern, freq):
     """Red-and-white candy stripes in object space: "diag" for canes, "radial" for peppermints,
@@ -289,9 +299,9 @@ M = dict(
     sugar=sugar_mat("Sugar"),
 )
 GUM = {k: gumdrop_mat(f"Gum_{k}", c) for k, c in CANDY.items()}
-GLASS = {k: glass_mat(f"Candyglass_{k}", c) for k, c in
-         dict(amber=(0.95, 0.45, 0.04), cherry=(0.80, 0.05, 0.05), lime=(0.30, 0.75, 0.05),
-              sky=(0.10, 0.45, 0.90)).items()}
+GLASS = {k: glass_mat(f"Candyglass_{k}", c, deep) for k, (c, deep) in
+         dict(amber=((0.95, 0.42, 0.04), (0.50, 0.11, 0.008)), cherry=((0.85, 0.08, 0.06), (0.32, 0.01, 0.01)),
+              lime=((0.35, 0.80, 0.06), (0.06, 0.25, 0.01)), sky=((0.15, 0.50, 0.95), (0.02, 0.12, 0.40))).items()}
 GUM_ORDER = ["cherry", "lemon", "lime", "orange", "sky", "pink", "grape"]
 
 _frost = {}
@@ -316,7 +326,8 @@ def pipe(name, pts, parent=None, r=0.02, closed=False, m=None, wobble=0.0015, st
     """A line of piped icing: a smooth round tube along `pts`, steady like a practised hand piped it."""
     pts = densify(pts, step, closed)
     cu = bpy.data.curves.new(name, "CURVE"); cu.dimensions = "3D"
-    cu.bevel_depth = r; cu.bevel_resolution = 1; cu.use_fill_caps = True
+    cu.bevel_depth = r; cu.bevel_resolution = 2 if r >= 0.022 else 1  # rounder where the line is thick enough to see it
+    cu.use_fill_caps = True
     sp = cu.splines.new("POLY"); sp.points.add(len(pts) - 1)
     for p, co in zip(sp.points, pts):
         p.co = (*(co + Vector([random.uniform(-wobble, wobble) for _ in range(3)])), 1)
@@ -378,6 +389,21 @@ def pyramid(name, loc, hw, h, m, parent=None):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return from_bm(name, bm, m, loc, parent=parent)
 
+def lathe(name, prof, m, loc, parent, segs=8):
+    """A round shape turned from (radius, z) points, bottom first; the first point sits on the axis."""
+    bm = bmesh.new()
+    tip = bm.verts.new((0, 0, prof[0][1]))
+    rings = [[bm.verts.new((r * math.cos(2 * math.pi * i / segs), r * math.sin(2 * math.pi * i / segs), z))
+              for i in range(segs)] for r, z in prof[1:]]
+    for i in range(segs):
+        j = (i + 1) % segs
+        bm.faces.new((tip, rings[0][j], rings[0][i]))
+        for a_, b_ in zip(rings, rings[1:]):
+            bm.faces.new((a_[i], a_[j], b_[j], b_[i]))
+    bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return from_bm(name, bm, m, loc, parent=parent)
+
 def drips(parent, a, b, step=0.2, length=(0.05, 0.16), r=0.035):
     """Icing that ran off an edge and set: rounded drops of different lengths hanging from a→b."""
     a, b = Vector(a), Vector(b)
@@ -385,12 +411,11 @@ def drips(parent, a, b, step=0.2, length=(0.05, 0.16), r=0.035):
     for k in range(n + 1):
         p = a.lerp(b, k / n) + Vector((random.uniform(-.01, .01), random.uniform(-.01, .01), 0))
         ln = random.uniform(*length)
-        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=6, v_segments=4, radius=1)
-        for v in bm.verts:  # a teardrop: full at the bottom, thin where it leaves the edge
-            t = (v.co.z + 1) / 2
-            w = r * (1.0 - 0.45 * t)
-            v.co.x *= w; v.co.y *= w; v.co.z = -ln * (1 - t)
-        soft(from_bm("Drip", bm, M["icing"], p, parent=parent))
+        rr = r * random.uniform(0.85, 1.1)
+        # A rounded bead at the bottom, narrowing to a neck where it leaves the edge.
+        prof = [(rr * math.sin(math.pi / 2 * k / 3), -ln + rr * (1 - math.cos(math.pi / 2 * k / 3))) for k in range(4)]
+        prof += [(rr * 0.75, -ln + rr + (ln - rr) * 0.5), (rr * 0.6, 0.0)]
+        soft(lathe("Drip", prof, M["icing"], p, parent))
 
 # ---------------------------------------------------------------- houses
 
@@ -451,7 +476,7 @@ def house(name, loc, W, D, Hw, rise, roof="gable", frost="white", windows=(), do
     root = empty(name, loc, rz + turn)
     color = FROST_NEUTRAL if neutral else FROST[frost]
     B0 = 0.14  # gingerbread footing
-    box("Footing", (0, 0, B0 / 2), (W + 0.14, D + 0.14, B0), M["ginger_dark"], root, bev=0.03, segs=3, jit=0.008)
+    box("Footing", (0, 0, B0 / 2), (W + 0.14, D + 0.14, B0), M["ginger_dark"], root, bev=0.03, segs=3)
     top, ridge = B0 + Hw, B0 + Hw + (rise if roof == "gable" else 0)
     prof = [(-W / 2, B0), (W / 2, B0), (W / 2, top)] + ([(0, ridge)] if roof == "gable" else []) + [(-W / 2, top)]
     bm = bmesh.new()
@@ -462,7 +487,6 @@ def house(name, loc, W, D, Hw, rise, roof="gable", frost="white", windows=(), do
         k2 = (k + 1) % len(prof)
         bm.faces.new((fr[k], fr[k2], bk[k2], bk[k]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    jitter(bm, 0.008)  # cookie panels never come out of the oven perfectly square
     bevel(from_bm("Walls", bm, M["ginger"], parent=root), 0.035, 3)  # puffed, rounded baked edges
 
     # Icing "glue" down every corner, as on a real gingerbread house.
